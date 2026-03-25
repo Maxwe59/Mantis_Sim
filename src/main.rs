@@ -1,14 +1,17 @@
 use bevy::prelude::*;
 mod mantis;
-use mantis::{center_of_mass, user_input};
+use mantis::{create_mantis, user_input};
+mod proc_anim;
+
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(Startup, center_of_mass)
+        .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
         .add_systems(Update, user_input)
+        .add_systems(Update, proc_anim::calc_segment_pos)
         .run();
 }
 
