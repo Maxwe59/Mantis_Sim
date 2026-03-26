@@ -2,9 +2,7 @@ use crate::mantis::Mantis;
 use crate::{MovementMode, WorldOptions};
 use bevy::prelude::*;
 
-
 pub fn lemniscate(t: f32) -> Vec3 {
-
     return Vec3::new(
         ((2.0 * t).cos()).sqrt() * t.cos(),
         0.0,
@@ -42,6 +40,8 @@ pub fn mouse_controls(
     world_options: Res<WorldOptions>,
     camera_query: Single<(&Camera, &GlobalTransform)>,
     window: Single<&Window>,
+    input: Res<ButtonInput<MouseButton>>,
+    time: Res<Time>,
 ) {
     if world_options.movement_mode != MovementMode::Mouse {
         return;
@@ -49,18 +49,26 @@ pub fn mouse_controls(
 
     let camera = camera_query.0;
     let camera_transform: &GlobalTransform = camera_query.1;
-    let Some(cursor_pos) = window.cursor_position() else { return };
+    let Some(cursor_pos) = window.cursor_position() else {
+        return;
+    };
 
-    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) else { return };
-    
+    let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) else {
+        return;
+    };
+
     let plane = InfinitePlane3d::new(Vec3::Y);
     if let Some(distance) = ray.intersect_plane(Vec3::ZERO, plane) {
+        let speed = mantis.1.speed;
         let world_pos = ray.origin + ray.direction * distance;
-            mantis.0.translation = world_pos;
+        let mantis_current_pos = mantis.0.translation;
+        let dir = world_pos - mantis_current_pos;
+
+        let y_pos = mantis_current_pos.y;
+        mantis.0.translation += dir.normalize() * speed * time.delta_secs();
+        mantis.0.translation.y = y_pos;
     }
 }
-
-
 
 pub fn auto_movement(
     mut mantis: Single<&mut Transform, With<Mantis>>,
@@ -70,7 +78,6 @@ pub fn auto_movement(
     if world_options.movement_mode != MovementMode::Auto {
         return;
     }
-    
 }
 
 pub fn switch_movement_mode(mut mode: ResMut<WorldOptions>, input: Res<ButtonInput<KeyCode>>) {

@@ -3,15 +3,13 @@ mod mantis;
 use mantis::create_mantis;
 mod controls;
 mod proc_anim;
-use controls::{
-    mouse_controls, keyboard_controls, switch_movement_mode,
-};
+use controls::{keyboard_controls, mouse_controls, switch_movement_mode};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(WorldOptions {
-            movement_mode: MovementMode::Keyboard,
+            movement_mode: MovementMode::Mouse,
         })
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
