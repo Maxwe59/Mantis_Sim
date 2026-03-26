@@ -3,16 +3,15 @@ mod mantis;
 use mantis::create_mantis;
 mod controls;
 mod proc_anim;
-use controls::{auto_movement, keyboard_controls, switch_movement_mode, ArcLengthCurve, lemniscate};
+use controls::{
+    mouse_controls, keyboard_controls, switch_movement_mode,
+};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(WorldOptions {
-            movement_mode: MovementMode::Auto,
-            auto_scale: 3.0,
-            auto_t: -std::f32::consts::PI,
-            arc_length: ArcLengthCurve::new(lemniscate, 100)
+            movement_mode: MovementMode::Keyboard,
         })
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
@@ -20,7 +19,7 @@ fn main() {
         .add_systems(Update, keyboard_controls)
         .add_systems(Update, proc_anim::calc_segment_pos)
         .add_systems(Update, switch_movement_mode)
-        .add_systems(Update, auto_movement)
+        .add_systems(Update, mouse_controls)
         .run();
 }
 
@@ -34,9 +33,6 @@ enum MovementMode {
 #[derive(Resource)]
 struct WorldOptions {
     movement_mode: MovementMode,
-    arc_length: ArcLengthCurve,
-    auto_scale: f32,
-    auto_t: f32,
 }
 
 /// set up a simple 3D scene
