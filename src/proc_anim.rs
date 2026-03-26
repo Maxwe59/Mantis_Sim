@@ -49,9 +49,6 @@ pub fn calc_segment_pos(
     let segments = &dynamic_body.segments;
     let segment_lengths = &dynamic_body.seg_lengths;
 
-    //let mut last_vec = transforms.get(dynamic_body.head).unwrap().translation;
-    //transforms.get_mut(segments[0]).unwrap().translation = last_vec;
-
     let mut last_vec = global_transforms
         .get(dynamic_body.segments[0])
         .unwrap()
@@ -65,9 +62,10 @@ pub fn calc_segment_pos(
         }
     }
 
-
-    let test_vec = transforms.get(dynamic_body.segments[0]).unwrap().translation;
-    println!("testvec: {:?}", test_vec);
+    let test_vec = transforms
+        .get(dynamic_body.segments[0])
+        .unwrap()
+        .translation;
 }
 
 fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Vec3 {

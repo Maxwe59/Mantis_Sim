@@ -59,13 +59,16 @@ pub fn mouse_controls(
 
     let plane = InfinitePlane3d::new(Vec3::Y);
     if let Some(distance) = ray.intersect_plane(Vec3::ZERO, plane) {
-        let speed = mantis.1.speed;
-        let world_pos = ray.origin + ray.direction * distance;
-        let mantis_current_pos = mantis.0.translation;
-        let dir = (world_pos - mantis_current_pos).normalize();
+        if input.pressed(MouseButton::Left) {
+            let speed = mantis.1.speed;
+            let mut world_pos = ray.origin + ray.direction * distance;
+            let mantis_current_pos = mantis.0.translation;
+            world_pos.y = mantis_current_pos.y;
+            let dir = (world_pos - mantis_current_pos).normalize();
 
-        mantis.0.translation += dir * speed * time.delta_secs();
-        mantis.0.look_to(dir, Vec3::Y);
+            mantis.0.translation += dir * speed * time.delta_secs();
+            mantis.0.look_to(dir, Vec3::Y);
+        }
     }
 }
 
