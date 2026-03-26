@@ -62,11 +62,10 @@ pub fn mouse_controls(
         let speed = mantis.1.speed;
         let world_pos = ray.origin + ray.direction * distance;
         let mantis_current_pos = mantis.0.translation;
-        let dir = world_pos - mantis_current_pos;
+        let dir = (world_pos - mantis_current_pos).normalize();
 
-        let y_pos = mantis_current_pos.y;
-        mantis.0.translation += dir.normalize() * speed * time.delta_secs();
-        mantis.0.translation.y = y_pos;
+        mantis.0.translation += dir * speed * time.delta_secs();
+        mantis.0.look_to(dir, Vec3::Y);
     }
 }
 

@@ -34,5 +34,10 @@ pub fn create_mantis(
             .id();
         segments.push(segment_id);
     }
-    commands.spawn(DynamicBody::new(seg_lens, segments, head_id));
+    commands.spawn(DynamicBody::new(
+        seg_lens,
+        segments,
+        head_id,
+        Vec3::new(0.0, 0.0, 0.5),
+    ));
 }

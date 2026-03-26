@@ -14,6 +14,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
+        .add_systems(PostStartup, proc_anim::setup_dynamic_body)
         .add_systems(Update, keyboard_controls)
         .add_systems(Update, proc_anim::calc_segment_pos)
         .add_systems(Update, switch_movement_mode)
