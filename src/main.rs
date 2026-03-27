@@ -9,16 +9,20 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(WorldOptions {
-            movement_mode: MovementMode::Mouse,
+            movement_mode: MovementMode::Legacy,
         })
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
         .add_systems(PostStartup, proc_anim::setup_dynamic_body)
         .add_systems(Update, keyboard_controls)
-        .add_systems(Update, proc_anim::calc_segment_pos)
+        .add_systems(
+            Update,
+            (proc_anim::angle_constraints, proc_anim::calc_segment_pos).chain(),
+        )
         .add_systems(Update, switch_movement_mode)
         .add_systems(Update, mouse_controls)
+        .add_systems(Update, controls::original_controls)
         .run();
 }
 
@@ -27,6 +31,7 @@ enum MovementMode {
     Mouse,
     Keyboard,
     Auto,
+    Legacy,
 }
 
 #[derive(Resource)]

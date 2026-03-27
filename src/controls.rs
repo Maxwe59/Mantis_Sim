@@ -92,8 +92,38 @@ pub fn switch_movement_mode(mut mode: ResMut<WorldOptions>, input: Res<ButtonInp
                 mode.movement_mode = MovementMode::Auto;
             }
             MovementMode::Auto => {
+                mode.movement_mode = MovementMode::Legacy;
+            }
+            MovementMode::Legacy => {
                 mode.movement_mode = MovementMode::Mouse;
             }
         }
+    }
+}
+
+pub fn original_controls(
+    mode: Res<WorldOptions>,
+    input: Res<ButtonInput<KeyCode>>,
+    mut mantis_params: Single<(&mut Transform, &Mantis)>,
+    time: Res<Time>,
+) {
+    if mode.movement_mode != MovementMode::Legacy {
+        return;
+    }
+    let speed = mantis_params.1.speed;
+
+    //rotators
+    if input.pressed(KeyCode::KeyD) {
+        mantis_params.0.rotation *= Quat::from_rotation_y(-speed * time.delta_secs());
+    } else if input.pressed(KeyCode::KeyA) {
+        mantis_params.0.rotation *= Quat::from_rotation_y(speed  * time.delta_secs());
+    }
+
+    //movement
+    let forward_vec = *mantis_params.0.forward();
+    if input.pressed(KeyCode::KeyW) {
+        mantis_params.0.translation += forward_vec * speed * time.delta_secs();
+    } else if input.pressed(KeyCode::KeyS) {
+        mantis_params.0.translation -= forward_vec * speed * time.delta_secs();
     }
 }
