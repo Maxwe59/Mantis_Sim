@@ -6,17 +6,28 @@ pub struct DynamicBody {
     head: Entity,          //entity dynamic body is connected to.
     segments: Vec<Entity>, //vec length should be seg_count - 1
     offset_head: Vec3,
+    angle_constraints: f32,
+    lerp_speed: f32,
 }
 #[derive(Component)]
 pub struct FabrikJoint {}
 
 impl DynamicBody {
-    pub fn new(seg_lens: Vec<f32>, segments: Vec<Entity>, head: Entity, offset: Vec3) -> Self {
+    pub fn new(
+        seg_lens: Vec<f32>,
+        segments: Vec<Entity>,
+        head: Entity,
+        offset: Vec3,
+        angle: f32,
+        lerp: f32,
+    ) -> Self {
         Self {
             seg_lengths: seg_lens,
             head: head,
             segments: segments,
             offset_head: offset,
+            angle_constraints: angle,
+            lerp_speed: lerp,
         }
     }
 
@@ -61,11 +72,41 @@ pub fn calc_segment_pos(
             last_vec = transform.translation;
         }
     }
+}
 
-    let test_vec = transforms
-        .get(dynamic_body.segments[0])
-        .unwrap()
-        .translation;
+pub fn angle_constraints(
+    dynamic_body: Single<&DynamicBody>,
+    mut transforms: Query<&mut Transform>,
+    global_transforms: Query<&mut GlobalTransform>,
+) {
+    let mut last_vec = *global_transforms.get(dynamic_body.head).unwrap().forward();
+    let segments = &dynamic_body.segments;
+    let segment_lengths = &dynamic_body.seg_lengths;
+
+    for i in 0..segment_lengths.len() {
+        let front_segment = transforms.get(dynamic_body.segments[i]).unwrap();
+        let back_segment = transforms.get(dynamic_body.segments[i + 1]).unwrap();
+
+        let current_vec = (front_segment.translation - back_segment.translation).normalize();
+        let angle = last_vec.angle_between(current_vec);
+        let segment_to_change = segments[i + 1].clone();
+        let past_segment = segments[i].clone();
+        if (angle > dynamic_body.angle_constraints) {
+            let axis = current_vec.cross(last_vec).normalize();
+            let new_vec = Quat::from_axis_angle(axis, dynamic_body.angle_constraints) * current_vec;
+            let new_pos =
+                transforms.get(past_segment).unwrap().translation + (new_vec * segment_lengths[i]);
+            let final_lerp = transforms
+                .get(segment_to_change)
+                .unwrap()
+                .translation
+                .lerp(new_pos, dynamic_body.lerp_speed);
+            transforms.get_mut(segment_to_change).unwrap().translation = final_lerp;
+            last_vec = new_vec;
+        } else {
+            last_vec = current_vec;
+        }
+    }
 }
 
 fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Vec3 {
