@@ -79,8 +79,14 @@ pub fn angle_constraints(
     mut transforms: Query<&mut Transform>,
     global_transforms: Query<&mut GlobalTransform>,
 ) {
-    let head_position = global_transforms.get(dynamic_body.head).unwrap().translation();
-    let first_seg_pos = global_transforms.get(dynamic_body.segments[0]).unwrap().translation();
+    let head_position = global_transforms
+        .get(dynamic_body.head)
+        .unwrap()
+        .translation();
+    let first_seg_pos = global_transforms
+        .get(dynamic_body.segments[0])
+        .unwrap()
+        .translation();
     let mut last_vec = (first_seg_pos - head_position).normalize();
     let segments = &dynamic_body.segments;
     let segment_lengths = &dynamic_body.seg_lengths;
