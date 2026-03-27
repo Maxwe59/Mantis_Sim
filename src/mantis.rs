@@ -28,7 +28,7 @@ pub fn create_mantis(
         .id();
 
     //create dynamic body
-    let seg_lens = vec![0.2, 0.2];
+    let seg_lens = vec![0.2, 0.2, 0.2, 0.2, 0.2];
     let mut segments = Vec::new();
     for i in 0..seg_lens.len() + 1 {
         let segment_id = commands

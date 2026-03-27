@@ -3,15 +3,14 @@ mod mantis;
 use mantis::create_mantis;
 mod controls;
 mod proc_anim;
-use controls::{controls_plugin};
-use proc_anim::{procedural_animation_plugin};
+use controls::controls_plugin;
+use proc_anim::procedural_animation_plugin;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(controls_plugin)
         .add_plugins(procedural_animation_plugin)
-
         .insert_resource(WorldOptions {
             movement_mode: MovementMode::Legacy,
         })

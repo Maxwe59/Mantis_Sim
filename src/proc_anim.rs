@@ -79,23 +79,32 @@ pub fn angle_constraints(
     mut transforms: Query<&mut Transform>,
     global_transforms: Query<&mut GlobalTransform>,
 ) {
-    let mut last_vec = *global_transforms.get(dynamic_body.head).unwrap().forward();
+    let head_position = global_transforms.get(dynamic_body.head).unwrap().translation();
+    let first_seg_pos = global_transforms.get(dynamic_body.segments[0]).unwrap().translation();
+    let mut last_vec = (first_seg_pos - head_position).normalize();
     let segments = &dynamic_body.segments;
     let segment_lengths = &dynamic_body.seg_lengths;
 
     for i in 0..segment_lengths.len() {
-        let front_segment = transforms.get(dynamic_body.segments[i]).unwrap();
-        let back_segment = transforms.get(dynamic_body.segments[i + 1]).unwrap();
+        let front_pos = global_transforms
+            .get(dynamic_body.segments[i])
+            .unwrap()
+            .translation();
+        let back_pos = global_transforms
+            .get(dynamic_body.segments[i + 1])
+            .unwrap()
+            .translation();
 
-        let current_vec = (front_segment.translation - back_segment.translation).normalize();
+        let current_vec = (back_pos - front_pos).normalize();
         let angle = last_vec.angle_between(current_vec);
         let segment_to_change = segments[i + 1].clone();
         let past_segment = segments[i].clone();
         if (angle > dynamic_body.angle_constraints) {
             let axis = current_vec.cross(last_vec).normalize();
-            let new_vec = Quat::from_axis_angle(axis, dynamic_body.angle_constraints) * current_vec;
-            let new_pos =
-                transforms.get(past_segment).unwrap().translation + (new_vec * segment_lengths[i]);
+            let new_vec =
+                Quat::from_axis_angle(axis, angle - dynamic_body.angle_constraints) * current_vec;
+            let new_pos = global_transforms.get(past_segment).unwrap().translation()
+                + (new_vec * segment_lengths[i]);
             let final_lerp = transforms
                 .get(segment_to_change)
                 .unwrap()
@@ -114,9 +123,7 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
     return dir + vec_static;
 }
 
-
 pub fn procedural_animation_plugin(app: &mut App) {
-    app
-        .add_systems(PostStartup, setup_dynamic_body)
+    app.add_systems(PostStartup, setup_dynamic_body)
         .add_systems(Update, (angle_constraints, calc_segment_pos).chain());
 }

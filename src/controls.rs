@@ -10,12 +10,17 @@ pub fn lemniscate(t: f32) -> Vec3 {
     );
 }
 
-
 pub fn controls_plugin(app: &mut App) {
-    app
-        .add_systems(Update, (keyboard_controls, mouse_controls, switch_movement_mode, legacy_controls));
+    app.add_systems(
+        Update,
+        (
+            keyboard_controls,
+            mouse_controls,
+            switch_movement_mode,
+            legacy_controls,
+        ),
+    );
 }
-
 
 pub fn keyboard_controls(
     mut mantis: Single<(&mut Transform, &Mantis)>,
@@ -123,7 +128,7 @@ pub fn legacy_controls(
     if input.pressed(KeyCode::KeyD) {
         mantis_params.0.rotation *= Quat::from_rotation_y(-speed * time.delta_secs());
     } else if input.pressed(KeyCode::KeyA) {
-        mantis_params.0.rotation *= Quat::from_rotation_y(speed  * time.delta_secs());
+        mantis_params.0.rotation *= Quat::from_rotation_y(speed * time.delta_secs());
     }
 
     //movement
