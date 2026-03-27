@@ -139,3 +139,6 @@ pub fn procedural_animation_plugin(app: &mut App) {
     app.add_systems(PostStartup, setup_dynamic_body)
         .add_systems(Update, (angle_constraints, calc_segment_pos).chain());
 }
+
+
+//todo: - midpoint object spawner, generalize offset function, fabrik joint component

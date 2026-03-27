@@ -5,6 +5,7 @@ mod controls;
 mod proc_anim;
 use controls::controls_plugin;
 use proc_anim::procedural_animation_plugin;
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
 fn main() {
     App::new()
@@ -17,6 +18,8 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
+        .add_plugins(EguiPlugin::default())
+        .add_plugins(WorldInspectorPlugin::new())
         .run();
 }
 
