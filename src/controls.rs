@@ -10,6 +10,13 @@ pub fn lemniscate(t: f32) -> Vec3 {
     );
 }
 
+
+pub fn controls_plugin(app: &mut App) {
+    app
+        .add_systems(Update, (keyboard_controls, mouse_controls, switch_movement_mode, legacy_controls));
+}
+
+
 pub fn keyboard_controls(
     mut mantis: Single<(&mut Transform, &Mantis)>,
     input: Res<ButtonInput<KeyCode>>,
@@ -101,7 +108,7 @@ pub fn switch_movement_mode(mut mode: ResMut<WorldOptions>, input: Res<ButtonInp
     }
 }
 
-pub fn original_controls(
+pub fn legacy_controls(
     mode: Res<WorldOptions>,
     input: Res<ButtonInput<KeyCode>>,
     mut mantis_params: Single<(&mut Transform, &Mantis)>,

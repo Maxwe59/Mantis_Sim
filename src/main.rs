@@ -3,26 +3,21 @@ mod mantis;
 use mantis::create_mantis;
 mod controls;
 mod proc_anim;
-use controls::{keyboard_controls, mouse_controls, switch_movement_mode};
+use controls::{controls_plugin};
+use proc_anim::{procedural_animation_plugin};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(controls_plugin)
+        .add_plugins(procedural_animation_plugin)
+
         .insert_resource(WorldOptions {
             movement_mode: MovementMode::Legacy,
         })
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
-        .add_systems(PostStartup, proc_anim::setup_dynamic_body)
-        .add_systems(Update, keyboard_controls)
-        .add_systems(
-            Update,
-            (proc_anim::angle_constraints, proc_anim::calc_segment_pos).chain(),
-        )
-        .add_systems(Update, switch_movement_mode)
-        .add_systems(Update, mouse_controls)
-        .add_systems(Update, controls::original_controls)
         .run();
 }
 

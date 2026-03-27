@@ -44,7 +44,7 @@ pub fn create_mantis(
         seg_lens,
         segments,
         head_id,
-        Vec3::new(0.0, 0.0, 0.5),
+        Vec3::new(0.0, 0.0, 0.2),
         30.0 * std::f32::consts::PI / 180.0,
         0.8,
     ));

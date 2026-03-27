@@ -113,3 +113,10 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
     let dir = (vec_to_move - vec_static).normalize() * distance;
     return dir + vec_static;
 }
+
+
+pub fn procedural_animation_plugin(app: &mut App) {
+    app
+        .add_systems(PostStartup, setup_dynamic_body)
+        .add_systems(Update, (angle_constraints, calc_segment_pos).chain());
+}
