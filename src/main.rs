@@ -4,10 +4,10 @@ use mantis::create_mantis;
 mod controls;
 mod proc_anim;
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
+use bevy::window::{PresentMode, Window, WindowPlugin};
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use controls::controls_plugin;
 use proc_anim::procedural_animation_plugin;
-use bevy::window::{PresentMode, WindowPlugin, Window};
 
 fn main() {
     App::new()

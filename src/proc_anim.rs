@@ -9,6 +9,9 @@ pub struct DynamicBody {
     angle_constraints: f32,
     lerp_speed: f32,
 }
+
+
+
 #[derive(Component)]
 pub struct FabrikJoint {}
 
@@ -81,18 +84,11 @@ pub fn calc_segment_pos(
 pub fn angle_constraints(
     dynamic_body_query: Query<&DynamicBody>,
     mut transforms: Query<&mut Transform>,
-    global_transforms: Query<&mut GlobalTransform>,
+    global_transforms: Query<&GlobalTransform>,
 ) {
     for dynamic_body in dynamic_body_query.iter() {
-        let head_position = global_transforms
-            .get(dynamic_body.head)
-            .unwrap()
-            .translation();
-        let first_seg_pos = global_transforms
-            .get(dynamic_body.segments[0])
-            .unwrap()
-            .translation();
-        let mut last_vec = (first_seg_pos - head_position).normalize();
+        let mut last_vec = -1.0 * (*global_transforms.get(dynamic_body.segments[0]).unwrap().forward()); 
+        //need to get the opposite of forward vector because each vector points backward
         let segments = &dynamic_body.segments;
         let segment_lengths = &dynamic_body.seg_lengths;
 
