@@ -6,20 +6,29 @@ mod proc_anim;
 use controls::controls_plugin;
 use proc_anim::procedural_animation_plugin;
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
+
+
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        
         .add_plugins(controls_plugin)
         .add_plugins(procedural_animation_plugin)
         .insert_resource(WorldOptions {
             movement_mode: MovementMode::Legacy,
         })
+        .add_systems(Startup, setup_fps_counter)
+   .add_systems(Update, update_fps_counter)
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
         .add_plugins(EguiPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
+        
+   
         .run();
 }
 
@@ -63,4 +72,37 @@ fn add_plane(
         MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
     ));
+}
+
+#[derive(Component)]
+struct FpsText;
+
+fn setup_fps_counter(mut commands: Commands) {
+    commands.spawn((
+        Text::new("FPS: "),
+        TextFont {
+            font_size: 20.0,
+            ..default()
+        },
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            left: Val::Px(1100.0),
+            ..default()
+        },
+        FpsText,
+    ));
+}
+
+fn update_fps_counter(
+    diagnostics: Res<DiagnosticsStore>,
+    mut query: Query<&mut Text, With<FpsText>>,
+) {
+    for mut text in &mut query {
+        if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+            if let Some(value) = fps.smoothed() {
+                **text = format!("FPS: {:.0}", value);
+            }
+        }
+    }
 }
