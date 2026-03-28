@@ -3,32 +3,34 @@ mod mantis;
 use mantis::create_mantis;
 mod controls;
 mod proc_anim;
+use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use controls::controls_plugin;
 use proc_anim::procedural_animation_plugin;
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
-
-
+use bevy::window::{PresentMode, WindowPlugin, Window};
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                present_mode: PresentMode::AutoNoVsync,
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
-        
         .add_plugins(controls_plugin)
         .add_plugins(procedural_animation_plugin)
         .insert_resource(WorldOptions {
             movement_mode: MovementMode::Legacy,
         })
         .add_systems(Startup, setup_fps_counter)
-   .add_systems(Update, update_fps_counter)
+        .add_systems(Update, update_fps_counter)
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
         .add_plugins(EguiPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
-        
-   
         .run();
 }
 
