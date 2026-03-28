@@ -1,5 +1,19 @@
 use bevy::prelude::*;
 
+
+
+macro_rules! impl_new {
+    ($t:ty, $($field:ident : $ftype:ty),*) => {
+        impl $t {
+            pub fn new($($field: $ftype),*) -> Self {
+                Self {
+                    $($field),*
+                }
+            }
+        }
+    };
+}
+
 #[derive(Component)]
 pub struct DynamicBody {
     seg_lengths: Vec<f32>, //length between segments, vec length should be seg_count - 1
@@ -10,29 +24,22 @@ pub struct DynamicBody {
     lerp_speed: f32,
 }
 
+#[derive(Component)]
+pub struct OffSetter{
+    head: Entity,
+    offset: Vec3,
+    child: Entity,
+}
 
 
 #[derive(Component)]
 pub struct FabrikJoint {}
 
+
+impl_new!(OffSetter, head: Entity, offset: Vec3, child: Entity);
+impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, head: Entity, offset_head: Vec3, angle_constraints: f32, lerp_speed: f32);
+
 impl DynamicBody {
-    pub fn new(
-        seg_lens: Vec<f32>,
-        segments: Vec<Entity>,
-        head: Entity,
-        offset: Vec3,
-        angle: f32,
-        lerp: f32,
-    ) -> Self {
-        Self {
-            seg_lengths: seg_lens,
-            head: head,
-            segments: segments,
-            offset_head: offset,
-            angle_constraints: angle,
-            lerp_speed: lerp,
-        }
-    }
 
     fn get_seg_len(&self) -> i32 {
         return self.seg_lengths.len() as i32;
@@ -87,8 +94,8 @@ pub fn angle_constraints(
     global_transforms: Query<&GlobalTransform>,
 ) {
     for dynamic_body in dynamic_body_query.iter() {
-        let mut last_vec = -1.0 * (*global_transforms.get(dynamic_body.segments[0]).unwrap().forward()); 
         //need to get the opposite of forward vector because each vector points backward
+        let mut last_vec = -1.0 * (*global_transforms.get(dynamic_body.segments[0]).unwrap().forward()); 
         let segments = &dynamic_body.segments;
         let segment_lengths = &dynamic_body.seg_lengths;
 
