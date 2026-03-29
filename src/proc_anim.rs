@@ -47,7 +47,7 @@ impl DynamicBody {
 pub fn setup_offset(offset_query: Query<&OffSetter>, mut commands: Commands, mut transforms: Query<&mut Transform>){
     for offset in offset_query.iter(){
         //first set child/parent relationship
-        commands.entity(offset.child).set_parent_in_place(offset.head);
+        commands.entity(offset.child).insert(ChildOf(offset.head));
         //transform child to parent 0
         transforms.get_mut(offset.child).unwrap().translation = Vec3::ZERO;
         //apply offset
