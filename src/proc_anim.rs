@@ -17,9 +17,7 @@ macro_rules! impl_new {
 #[derive(Component)]
 pub struct DynamicBody {
     seg_lengths: Vec<f32>, //length between segments, vec length should be seg_count - 1
-    head: Entity,          //entity dynamic body is connected to. moves with respect to head
     segments: Vec<Entity>, //vec length should be seg_count - 1
-    offset_head: Vec3,
     angle_constraints: f32,
     lerp_speed: f32,
 }
@@ -37,7 +35,7 @@ pub struct FabrikJoint {}
 
 
 impl_new!(OffSetter, head: Entity, offset: Vec3, child: Entity);
-impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, head: Entity, offset_head: Vec3, angle_constraints: f32, lerp_speed: f32);
+impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
 
 impl DynamicBody {
 
@@ -46,23 +44,19 @@ impl DynamicBody {
     }
 }
 
-pub fn setup_dynamic_body(
-    dynamic_body_query: Query<&DynamicBody>,
-    mut commands: Commands,
-    mut transforms: Query<&mut Transform>,
-) {
-    for dynamic_body in dynamic_body_query.iter() {
-        let first_segment = dynamic_body.segments[0];
-        let head_transform = transforms.get_mut(dynamic_body.head).unwrap().translation;
-        let mut first_seg_transform = transforms.get_mut(first_segment).unwrap();
-
-        first_seg_transform.translation = head_transform;
-        commands
-            .entity(first_segment)
-            .set_parent_in_place(dynamic_body.head);
-        first_seg_transform.translation += dynamic_body.offset_head;
+pub fn setup_offset(offset_query: Query<&OffSetter>, mut commands: Commands, mut transforms: Query<&mut Transform>){
+    for offset in offset_query.iter(){
+        //first set child/parent relationship
+        commands.entity(offset.child).set_parent_in_place(offset.head);
+        //transform child to parent 0
+        transforms.get_mut(offset.child).unwrap().translation = Vec3::ZERO;
+        //apply offset
+        transforms.get_mut(offset.child).unwrap().translation = offset.offset;
+        //transforms.get_mut(offset.child).unwrap().translation.y += 0.5; //temporary, should be based on center of mass
     }
 }
+
+
 
 pub fn calc_segment_pos(
     dynamic_body_query: Query<&DynamicBody>,
@@ -139,7 +133,7 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
 }
 
 pub fn procedural_animation_plugin(app: &mut App) {
-    app.add_systems(PostStartup, setup_dynamic_body)
+    app.add_systems(PostStartup, setup_offset)
         .add_systems(Update, (angle_constraints, calc_segment_pos).chain());
 }
 

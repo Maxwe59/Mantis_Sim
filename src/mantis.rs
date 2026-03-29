@@ -41,14 +41,11 @@ pub fn create_mantis(
         segments.push(segment_id);
     }
     let offset_entity = segments[0].clone();
-    commands.spawn(DynamicBody::new(
+    commands.spawn((DynamicBody::new(
         seg_lens,
         segments,
-        head_id,
-        Vec3::new(0.0, 0.0, 0.2),
         30.0 * std::f32::consts::PI / 180.0,
         0.8,
-    ));
+    ),OffSetter::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity)));
     
-    commands.spawn(OffSetter::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity));
 }
