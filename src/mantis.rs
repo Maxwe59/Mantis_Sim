@@ -8,6 +8,22 @@ pub struct Mantis {
     //include color, and scale factors here later
 }
 
+impl Mantis{
+    pub fn init_bundle(&self)-> impl Bundle{
+        return (
+            /*
+            Mantis {
+                speed: 5.0,
+                init_center_of_mass: self.init_center_of_mass,
+            },
+            Mesh3d(meshes.add(Sphere::new(0.1))),
+            MeshMaterial3d(materials.add(Color::srgb_u8(255, 255, 255))),
+            Transform::from_xyz(center_of_mass.x, center_of_mass.y, center_of_mass.z),
+             */
+        );
+    }
+}
+
 pub fn create_mantis(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -41,11 +57,8 @@ pub fn create_mantis(
         segments.push(segment_id);
     }
     let offset_entity = segments[0].clone();
-    commands.spawn((DynamicBody::new(
-        seg_lens,
-        segments,
-        30.0 * std::f32::consts::PI / 180.0,
-        0.8,
-    ),OffSetter::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity)));
-    
+    commands.spawn((
+        DynamicBody::new(seg_lens, segments, 30.0 * std::f32::consts::PI / 180.0, 0.8),
+        OffSetter::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity),
+    ));
 }
