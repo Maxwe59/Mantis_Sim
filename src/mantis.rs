@@ -1,4 +1,4 @@
-use crate::proc_anim::{DynamicBody, OffSetter};
+use crate::proc_anim::{DynamicBody, FabrikJoint, OffSetter};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -8,8 +8,8 @@ pub struct Mantis {
     //include color, and scale factors here later
 }
 
-impl Mantis{
-    pub fn init_bundle(&self)-> impl Bundle{
+impl Mantis {
+    pub fn init_bundle(&self) -> impl Bundle {
         return (
             /*
             Mantis {
@@ -60,5 +60,24 @@ pub fn create_mantis(
     commands.spawn((
         DynamicBody::new(seg_lens, segments, 30.0 * std::f32::consts::PI / 180.0, 0.8),
         OffSetter::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity),
+    ));
+
+    //create fabrik joinnt
+    let seg_lens = vec![0.2, 0.2, 0.2];
+    let mut segments = Vec::new();
+    for i in 0..seg_lens.len() + 1 {
+        let segment_id = commands
+            .spawn((
+                Mesh3d(meshes.add(Sphere::new(0.1))),
+                MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+                Transform::from_xyz(i as f32, 0.5, 0.0),
+            ))
+            .id();
+        segments.push(segment_id);
+    }
+    let offset_entity = segments[0].clone();
+    commands.spawn((
+        OffSetter::new(head_id, Vec3::new(0.2, 0.0, 0.0), offset_entity),
+        FabrikJoint::new_with_default(seg_lens, segments, 0.5, 0.7, Vec3::new(0.4, 0.0, 0.0)),
     ));
 }
