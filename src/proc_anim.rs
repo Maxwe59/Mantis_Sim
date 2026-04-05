@@ -53,6 +53,15 @@ pub struct FabrikJoint {
     t_val: f32,
 }
 
+
+//must run after dynamicbody, and after all range/angle constraints.
+#[derive(Component)]
+pub struct NodeMutater{
+    nodes: Vec<Entity>,
+    function: fn(i32) -> Vec3 //maps node translations given an i to a vec3
+
+}
+
 impl_new!(SegmentFiller, segments: Vec<Entity>, midpoint_segments: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(OffSetter, head: Entity, offset: Vec3, child: Entity);
 impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
@@ -294,6 +303,16 @@ fn midpoint_filler(
     }
 }
 
+
+fn node_mutator(node_mutator_query: Query<&NodeMutater>, mut transforms: Query<&mut Transform>) {
+    for node_mutator in node_mutator_query.iter() {
+        
+        
+    }
+}
+
+
+
 fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Vec3 {
     let dir = (vec_to_move - vec_static).normalize() * distance;
     return dir + vec_static;
@@ -306,4 +325,3 @@ pub fn procedural_animation_plugin(app: &mut App) {
         .add_systems(Update, midpoint_filler);
 }
 
-//todo: - midpoint object spawner, generalize offset function, fabrik joint component
