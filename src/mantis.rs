@@ -109,9 +109,8 @@ pub fn create_mantis(
             segments,
             0.5,
             0.7,
-            Vec3::new(0.4, 0.0, 0.2),
+            Vec3::new(0.4, -0.2, 0.2),
             offset_entity,
-            Vec3::new(0.4, 0.0, 0.0),
         ),
     ));
 }

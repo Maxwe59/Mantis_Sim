@@ -83,7 +83,6 @@ impl FabrikJoint {
         lerp_speed: f32,
         target_offset: Vec3,
         anchor_entity: Entity,
-        init_target: Vec3,
     ) -> Self {
         return Self {
             seg_lengths: seg_lengths,
@@ -95,7 +94,7 @@ impl FabrikJoint {
             fabrik_iterations: 5,
             stepping: false,
             new_target_pos: Vec3::ZERO,
-            target: init_target,
+            target: Vec3::ZERO,
             t_val: 0.0,
         };
     }
