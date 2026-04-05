@@ -60,8 +60,10 @@ pub struct NodeMutater{
     nodes: Vec<Entity>,
     function: fn(i32) -> Vec3 //maps node translations given an i to a vec3
 
+
 }
 
+impl_new!(NodeMutater, nodes: Vec<Entity>, function: fn(i32) -> Vec3);
 impl_new!(SegmentFiller, segments: Vec<Entity>, midpoint_segments: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(OffSetter, head: Entity, offset: Vec3, child: Entity);
 impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
@@ -208,7 +210,7 @@ pub fn fabrik_calculator(
             .unwrap()
             .translation();
 
-        if fabrik_joint.max_target_dist > fabrik_joint.target.distance(updated_target) {
+        if fabrik_joint.max_target_dist < fabrik_joint.target.distance(updated_target) {
             //implement lerping logic
             fabrik_joint.stepping = true;
             fabrik_joint.new_target_pos = updated_target;
@@ -234,7 +236,7 @@ pub fn fabrik_calculator(
                 .get_mut(fabrik_joint.segments.last().unwrap().clone())
                 .unwrap()
                 .translation = fabrik_joint.target;
-            for i in (1..(fabrik_joint.segments.len() - 1)).rev() {
+            for i in (0..(fabrik_joint.segments.len() - 1)).rev() {
                 let point1 = transforms
                     .get(fabrik_joint.segments[i].clone())
                     .unwrap()
@@ -265,7 +267,7 @@ pub fn fabrik_calculator(
                     .translation;
                 let new_vec = (point1 - point2).normalize() * fabrik_joint.seg_lengths[i - 1];
                 transforms
-                    .get_mut(fabrik_joint.segments[i - 1].clone())
+                    .get_mut(fabrik_joint.segments[i ].clone())
                     .unwrap()
                     .translation = point2 + new_vec;
             }
@@ -306,6 +308,15 @@ fn midpoint_filler(
 
 fn node_mutator(node_mutator_query: Query<&NodeMutater>, mut transforms: Query<&mut Transform>) {
     for node_mutator in node_mutator_query.iter() {
+        let nodes = &node_mutator.nodes;
+        let function = node_mutator.function;
+        for (i, node) in nodes.iter().enumerate(){
+            let offset = function(i as i32);
+            let mut node_transform = transforms.get_mut(node.clone()).unwrap();
+            node_transform.translation += offset;
+
+        }
+        
         
         
     }
@@ -320,7 +331,7 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
 
 pub fn procedural_animation_plugin(app: &mut App) {
     app.add_systems(PostStartup, setup_offset)
-        .add_systems(Update, (angle_constraints, calc_segment_pos).chain())
+        .add_systems(Update, (angle_constraints, node_mutator, calc_segment_pos).chain())
         .add_systems(Update, fabrik_calculator)
         .add_systems(Update, midpoint_filler);
 }

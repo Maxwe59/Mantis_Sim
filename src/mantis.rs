@@ -1,4 +1,4 @@
-use crate::proc_anim::{DynamicBody, FabrikJoint, OffSetter, SegmentFiller};
+use crate::proc_anim::{DynamicBody, FabrikJoint, OffSetter, SegmentFiller, NodeMutater};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -24,6 +24,11 @@ impl Mantis {
     }
 }
 
+
+fn linear_downset(i: i32) -> Vec3 {
+    return Vec3::new(0.0, 0.0 - (i as f32 * 0.01), 0.0);
+}
+
 pub fn create_mantis(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -44,7 +49,7 @@ pub fn create_mantis(
         .id();
 
     //create dynamic body
-    let seg_lens = vec![0.2; 10];
+    let seg_lens = vec![0.4; 10];
     let mut segments = Vec::new();
     let mut midpoint_segments = Vec::new();
     for i in 0..seg_lens.len() + 1 {
@@ -69,16 +74,16 @@ pub fn create_mantis(
     }
     let offset_entity = segments[0].clone();
     let segments_cloned = segments.clone();
+    let segments_cloned2 = segments.clone();
     commands.spawn((
         DynamicBody::new(seg_lens, segments, 10.0 * std::f32::consts::PI / 180.0, 0.8),
         OffSetter::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity),
         SegmentFiller::new(segments_cloned, midpoint_segments, Vec3::Y),
+        NodeMutater::new(segments_cloned2, linear_downset),
     ));
 
     //create fabrik joinnt
     
-
-    /*
     let seg_lens = vec![0.2, 0.2, 0.2];
     let mut segments = Vec::new();
     for i in 0..seg_lens.len() + 1 {
@@ -109,5 +114,4 @@ pub fn create_mantis(
             Vec3::new(0.4, 0.0, 0.0),
         ),
     ));
-     */
 }
