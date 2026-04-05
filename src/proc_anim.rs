@@ -34,8 +34,7 @@ pub struct OffSetter {
 #[derive(Component)]
 pub struct SegmentFiller {
     segments: Vec<Entity>,
-    mesh: Mesh3d,
-    material: MeshMaterial3d<StandardMaterial>,
+    midpoint_segments: Vec<Entity>,
 }
 
 #[derive(Component)]
@@ -51,7 +50,7 @@ pub struct FabrikJoint {
     t_val: f32,
 }
 
-impl_new!(SegmentFiller, segments: Vec<Entity>, mesh: Mesh3d, material: MeshMaterial3d<StandardMaterial>);
+impl_new!(SegmentFiller, segments: Vec<Entity>, midpoint_segments: Vec<Entity>);
 impl_new!(OffSetter, head: Entity, offset: Vec3, child: Entity);
 impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
 impl_new!(FabrikJoint, seg_lengths: Vec<f32>, segments: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_pos: Vec3, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, t_val: f32);
@@ -255,14 +254,33 @@ pub fn fabrik_calculator(
     }
 }
 
-fn setup_material_filler(
+fn midpoint_filler(
     segment_fillers: Query<&SegmentFiller>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
     global_transforms: Query<&GlobalTransform>,
+    mut transforms: Query<&mut Transform>,
 ) {
     for segment_filler in segment_fillers.iter() {
+        let entity_list = &segment_filler.segments;
+        let midpoint_entity_list = &segment_filler.midpoint_segments; //will be len(entity_list)-1 length
+        for i in 0..(midpoint_entity_list.len()) {
+            let pos1 = global_transforms
+                .get(entity_list[i].clone())
+                .unwrap()
+                .translation();
+            let pos2 = global_transforms
+                .get(entity_list[i + 1].clone())
+                .unwrap()
+                .translation();
+            let midpoint = (pos1 + pos2) / 2.0;
+            let dir = (pos1 - pos2).normalize();
+            let mut midpoint_entity = transforms.get_mut(midpoint_entity_list[i].clone()).unwrap();
 
+            //set midpoint entity to midpoint between pos1 and pos2
+            midpoint_entity.translation = midpoint;
+
+            //set rotation
+            midpoint_entity.rotation = Quat::from_rotation_arc(Vec3::NEG_Z, dir);
+        }
     }
 }
 
@@ -274,7 +292,8 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
 pub fn procedural_animation_plugin(app: &mut App) {
     app.add_systems(PostStartup, setup_offset)
         .add_systems(Update, (angle_constraints, calc_segment_pos).chain())
-        .add_systems(Update, fabrik_calculator);
+        .add_systems(Update, fabrik_calculator)
+        .add_systems(Update, midpoint_filler);
 }
 
 //todo: - midpoint object spawner, generalize offset function, fabrik joint component
