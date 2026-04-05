@@ -35,6 +35,7 @@ pub struct OffSetter {
 pub struct SegmentFiller {
     segments: Vec<Entity>,
     midpoint_segments: Vec<Entity>,
+    vec_dir_segment: Vec3, //defines which vector direction the segment points in when the midpoint filler calculates rotation
 }
 
 #[derive(Component)]
@@ -43,17 +44,19 @@ pub struct FabrikJoint {
     segments: Vec<Entity>,
     max_target_dist: f32, //max distance target (foot) can get from target_pos (global space)
     lerp_speed: f32,
-    target_pos: Vec3, //relative to anchor position (segments[0]),
+    target_offset: Vec3,   //relative to anchor position (segments[0]),
+    anchor_entity: Entity, //entity the fabrik joint is anchored to.
     fabrik_iterations: i32,
     stepping: bool,
     new_target_pos: Vec3, //used to lerp between the old target_pos and new_target_pos, when stepping is true.
+    target: Vec3,         //used to track foot location
     t_val: f32,
 }
 
-impl_new!(SegmentFiller, segments: Vec<Entity>, midpoint_segments: Vec<Entity>);
+impl_new!(SegmentFiller, segments: Vec<Entity>, midpoint_segments: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(OffSetter, head: Entity, offset: Vec3, child: Entity);
 impl_new!(DynamicBody, seg_lengths: Vec<f32>, segments: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
-impl_new!(FabrikJoint, seg_lengths: Vec<f32>, segments: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_pos: Vec3, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, t_val: f32);
+impl_new!(FabrikJoint, seg_lengths: Vec<f32>, segments: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_offset: Vec3, anchor_entity: Entity, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, target: Vec3, t_val: f32);
 
 impl DynamicBody {
     fn get_seg_len(&self) -> i32 {
@@ -67,17 +70,21 @@ impl FabrikJoint {
         segments: Vec<Entity>,
         max_target_dist: f32,
         lerp_speed: f32,
-        target_pos: Vec3,
+        target_offset: Vec3,
+        anchor_entity: Entity,
+        init_target: Vec3,
     ) -> Self {
         return Self {
             seg_lengths: seg_lengths,
             segments: segments,
             max_target_dist: max_target_dist,
             lerp_speed: lerp_speed,
-            target_pos: target_pos,
+            target_offset: target_offset,
+            anchor_entity: anchor_entity,
             fabrik_iterations: 5,
             stepping: false,
             new_target_pos: Vec3::ZERO,
+            target: init_target,
             t_val: 0.0,
         };
     }
@@ -178,16 +185,21 @@ pub fn fabrik_calculator(
     global_transforms: Query<&GlobalTransform>,
 ) {
     for mut fabrik_joint in fabrik_query.iter_mut() {
-        let foot_segment = global_transforms
-            .get(fabrik_joint.segments.last().unwrap().clone())
+        let rotation_of_anchor = global_transforms
+            .get(fabrik_joint.anchor_entity)
             .unwrap()
-            .translation(); //global pos of foot segment (end effector)
-        let forward_vec = global_transforms
-            .get(fabrik_joint.segments[0])
+            .rotation();
+        let updated_target = global_transforms
+            .get(fabrik_joint.anchor_entity)
             .unwrap()
-            .forward(); //assumes first fabrik segment is a child of the center of mass (so rotation is copied)
-        let updated_target = foot_segment + (forward_vec * fabrik_joint.max_target_dist);
-        if fabrik_joint.max_target_dist > foot_segment.distance(updated_target) {
+            .translation()
+            + (rotation_of_anchor * fabrik_joint.target_offset);
+        let anchor_pos = global_transforms
+            .get(fabrik_joint.anchor_entity)
+            .unwrap()
+            .translation();
+
+        if fabrik_joint.max_target_dist > fabrik_joint.target.distance(updated_target) {
             //implement lerping logic
             fabrik_joint.stepping = true;
             fabrik_joint.new_target_pos = updated_target;
@@ -198,8 +210,8 @@ pub fn fabrik_calculator(
             //recalculate currentmost target (because teh entire body is moving, using old target will result in incomplete step)
             fabrik_joint.new_target_pos = updated_target;
             fabrik_joint.t_val += fabrik_joint.lerp_speed;
-            fabrik_joint.target_pos = fabrik_joint
-                .target_pos
+            fabrik_joint.target = fabrik_joint
+                .target
                 .lerp(fabrik_joint.new_target_pos, fabrik_joint.t_val);
             //reset stepping to false
             if fabrik_joint.t_val >= 1.0 {
@@ -212,8 +224,8 @@ pub fn fabrik_calculator(
             transforms
                 .get_mut(fabrik_joint.segments.last().unwrap().clone())
                 .unwrap()
-                .translation = fabrik_joint.target_pos;
-            for i in (1..(fabrik_joint.seg_lengths.len())).rev() {
+                .translation = fabrik_joint.target;
+            for i in (1..(fabrik_joint.segments.len() - 1)).rev() {
                 let point1 = transforms
                     .get(fabrik_joint.segments[i].clone())
                     .unwrap()
@@ -229,21 +241,24 @@ pub fn fabrik_calculator(
                     .translation = point2 + new_vec;
             }
             //frontpass
-            //transforms.get_mut(fabrik_joint.segments[0].clone()).unwrap().translation =
-            for i in 0..fabrik_joint.seg_lengths.len() {
+            transforms
+                .get_mut(fabrik_joint.segments[0].clone())
+                .unwrap()
+                .translation = anchor_pos;
+            for i in 1..fabrik_joint.segments.len() {
                 let point1 = transforms
                     .get(fabrik_joint.segments[i].clone())
                     .unwrap()
                     .translation;
                 let point2 = transforms
-                    .get(fabrik_joint.segments[i + 1].clone())
+                    .get(fabrik_joint.segments[i - 1].clone())
                     .unwrap()
                     .translation;
-                let new_vec = (point2 - point1).normalize() * fabrik_joint.seg_lengths[i];
+                let new_vec = (point1 - point2).normalize() * fabrik_joint.seg_lengths[i - 1];
                 transforms
-                    .get_mut(fabrik_joint.segments[i + 1].clone())
+                    .get_mut(fabrik_joint.segments[i - 1].clone())
                     .unwrap()
-                    .translation = point1 + new_vec;
+                    .translation = point2 + new_vec;
             }
         }
     }
@@ -274,7 +289,7 @@ fn midpoint_filler(
             midpoint_entity.translation = midpoint;
 
             //set rotation
-            midpoint_entity.rotation = Quat::from_rotation_arc(Vec3::NEG_Z, dir);
+            midpoint_entity.rotation = Quat::from_rotation_arc(segment_filler.vec_dir_segment, dir);
         }
     }
 }
