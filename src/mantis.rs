@@ -60,7 +60,7 @@ pub fn create_mantis(
         if (i < seg_lens.len()) {
             let midpoint_id = commands
                 .spawn((
-                    Mesh3d(meshes.add(Cylinder::new(0.2, seg_lens[i] / 2.0))),
+                    Mesh3d(meshes.add(Cylinder::new(0.15, seg_lens[i]))),
                     MeshMaterial3d(materials.add(Color::srgb_u8(255, 124, 144))),
                 ))
                 .id();
