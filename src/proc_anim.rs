@@ -178,19 +178,14 @@ pub fn fabrik_calculator(
     global_transforms: Query<&GlobalTransform>,
 ) {
     for mut fabrik_joint in fabrik_query.iter_mut() {
-        let anchor_pos = global_transforms
-            .get(fabrik_joint.segments[0])
-            .unwrap()
-            .translation();
-        let update_target = fabrik_joint.target_pos + anchor_pos;
-        let foot_segment = transforms
+        let foot_segment = global_transforms
             .get(fabrik_joint.segments.last().unwrap().clone())
             .unwrap()
-            .translation;
+            .translation(); //global pos of foot segment (end effector)
         let forward_vec = global_transforms
             .get(fabrik_joint.segments[0])
             .unwrap()
-            .forward();
+            .forward(); //assumes first fabrik segment is a child of the center of mass (so rotation is copied)
         let updated_target = foot_segment + (forward_vec * fabrik_joint.max_target_dist);
         if fabrik_joint.max_target_dist > foot_segment.distance(updated_target) {
             //implement lerping logic
