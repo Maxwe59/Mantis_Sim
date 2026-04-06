@@ -189,6 +189,25 @@ pub fn angle_constraints(
     }
 }
 
+pub fn dynamic_body_calculator(
+    mut transforms: Query<&mut Transform>,
+    global_transforms: Query<&GlobalTransform>,
+    dynamic_body_query: Query<&DynamicBody>,
+) {
+    for dynamic_body in dynamic_body_query.iter() {
+        for i in 0..dynamic_body.get_seg_len(){
+            //angle restrictions
+
+
+            //apply segment offset
+
+
+            //apply distance constraints LAST
+
+        }
+    }
+}
+
 pub fn fabrik_calculator(
     mut fabrik_query: Query<&mut FabrikJoint>,
     mut transforms: Query<&mut Transform>,
