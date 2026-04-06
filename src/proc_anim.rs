@@ -19,7 +19,7 @@ revolving around the head entity. (Assuming both need the component OffSetter)
 #[derive(Component)]
 pub struct DynamicBody {
     seg_lengths: Vec<f32>, //length between segments, vec length should be seg_count - 1
-    nodes: Vec<Entity>, //vec length should be seg_count - 1
+    nodes: Vec<Entity>,    //vec length should be seg_count - 1
     angle_constraints: f32,
     lerp_speed: f32,
 }
@@ -48,9 +48,9 @@ pub struct FabrikJoint {
     anchor_entity: Entity, //entity the fabrik joint is anchored to.
     fabrik_iterations: i32,
     //interal variables used to calculate states
-    stepping: bool, 
+    stepping: bool,
     new_target_pos: Vec3, //used to lerp between the old target_pos and new_target_pos, when stepping is true.
-    curr_target_pos: Vec3,         //used to track foot location
+    curr_target_pos: Vec3, //used to track foot location
     t_val: f32,
 }
 
@@ -105,7 +105,9 @@ pub fn setup_offset(
 ) {
     for pivotter in pivot_query.iter() {
         //first set child/parent relationship
-        commands.entity(pivotter.child).insert(ChildOf(pivotter.head));
+        commands
+            .entity(pivotter.child)
+            .insert(ChildOf(pivotter.head));
         //transform child to parent 0
         transforms.get_mut(pivotter.child).unwrap().translation = Vec3::ZERO;
         //apply offset
@@ -296,7 +298,7 @@ fn midpoint_filler(
             //set midpoint entity to midpoint between pos1 and pos2
             midpoint_entity.translation = midpoint;
 
-            //set rotation
+            //set rotation to be pointing in the direction of dir, moves from vector to "to" vec direction
             midpoint_entity.rotation = Quat::from_rotation_arc(segment_filler.vec_dir_segment, dir);
         }
     }
