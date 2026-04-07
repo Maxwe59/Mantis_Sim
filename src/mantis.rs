@@ -71,12 +71,10 @@ pub fn create_mantis(
             midpoint_segments.push(midpoint_id);
         }
     }
-    let offset_entity = segments[0].clone();
     let segments_cloned = segments.clone();
     let segments_cloned2 = segments.clone();
     commands.spawn((
-        DynamicBody::new(seg_lens, segments, 10.0 * std::f32::consts::PI / 180.0, 0.8),
-        PivotEntity::new(head_id, Vec3::new(0.0, 0.0, 0.2), offset_entity),
+        DynamicBody::new(seg_lens, segments, 10.0 * std::f32::consts::PI / 180.0, 0.8, head_id),
         SegmentFiller::new(segments_cloned, midpoint_segments, Vec3::Y),
         NodeOffsetter::new(segments_cloned2, linear_downset),
     ));

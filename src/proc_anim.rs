@@ -22,6 +22,7 @@ pub struct DynamicBody {
     nodes: Vec<Entity>,    //vec length should be seg_count - 1
     angle_constraints: f32,
     lerp_speed: f32,
+    anchor_entity: Entity
 }
 
 #[derive(Component)]
@@ -64,7 +65,7 @@ pub struct NodeOffsetter {
 impl_new!(NodeOffsetter, nodes: Vec<Entity>, function: fn(i32) -> Vec3);
 impl_new!(SegmentFiller, nodes: Vec<Entity>, midpoints: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(PivotEntity, head: Entity, offset: Vec3, child: Entity);
-impl_new!(DynamicBody, seg_lengths: Vec<f32>, nodes: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
+impl_new!(DynamicBody, seg_lengths: Vec<f32>, nodes: Vec<Entity>, angle_constraints: f32, lerp_speed: f32, anchor_entity: Entity);
 impl_new!(FabrikJoint, seg_lengths: Vec<f32>, nodes: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_offset: Vec3, anchor_entity: Entity, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, curr_target_pos: Vec3, t_val: f32);
 
 impl DynamicBody {
@@ -122,8 +123,13 @@ pub fn calc_segment_pos(
     global_transforms: Query<&GlobalTransform>,
 ) {
     for dynamic_body in dynamic_body_query.iter() {
+        let anchor_entity_pos = global_transforms.get(dynamic_body.anchor_entity).unwrap();
         let nodes = &dynamic_body.nodes;
         let segment_lengths = &dynamic_body.seg_lengths;
+
+        let mut first_node = transforms.get_mut(nodes[0]).unwrap();
+        first_node.translation = anchor_entity_pos.translation();
+        first_node.rotation = anchor_entity_pos.rotation();
 
         let mut last_vec = global_transforms
             .get(dynamic_body.nodes[0])
