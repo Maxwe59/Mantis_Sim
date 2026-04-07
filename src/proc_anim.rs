@@ -22,6 +22,8 @@ pub struct DynamicBody {
     nodes: Vec<Entity>,    //vec length should be seg_count - 1
     angle_constraints: f32,
     lerp_speed: f32,
+    function: fn(i32) -> Vec3, //maps node translation given an i to a vec3
+
 }
 
 #[derive(Component)]
@@ -64,7 +66,7 @@ pub struct NodeOffsetter {
 impl_new!(NodeOffsetter, nodes: Vec<Entity>, function: fn(i32) -> Vec3);
 impl_new!(SegmentFiller, nodes: Vec<Entity>, midpoints: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(PivotEntity, head: Entity, offset: Vec3, child: Entity);
-impl_new!(DynamicBody, seg_lengths: Vec<f32>, nodes: Vec<Entity>, angle_constraints: f32, lerp_speed: f32);
+impl_new!(DynamicBody, seg_lengths: Vec<f32>, nodes: Vec<Entity>, angle_constraints: f32, lerp_speed: f32, function: fn(i32) -> Vec3);
 impl_new!(FabrikJoint, seg_lengths: Vec<f32>, nodes: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_offset: Vec3, anchor_entity: Entity, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, curr_target_pos: Vec3, t_val: f32);
 
 impl DynamicBody {
@@ -130,12 +132,12 @@ pub fn calc_segment_pos(
             .unwrap()
             .translation();
         for (i, segment) in nodes.iter().skip(1).enumerate() {
-            if let Ok(mut transform) = transforms.get_mut(segment.clone()) {
-                let current_vec = transform.translation;
-                let new_vec = distance_restraints(last_vec, current_vec, segment_lengths[i]);
-                transform.translation = new_vec;
-                last_vec = transform.translation;
-            }
+            let mut segment_transform = transforms.get_mut(nodes[i + 1].clone()).unwrap();
+
+            let current_vec = segment_transform.translation;
+            let new_vec = distance_restraints(last_vec, current_vec, segment_lengths[i]);
+            segment_transform.translation = new_vec;
+            last_vec = segment_transform.translation;
         }
     }
 }
@@ -166,26 +168,43 @@ pub fn angle_constraints(
                 .translation();
 
             let current_vec = (back_pos - front_pos).normalize();
-            let angle = last_vec.angle_between(current_vec);
-            let segment_to_change = nodes[i + 1].clone();
-            let past_segment = nodes[i].clone();
+            let angle: f32 = last_vec.angle_between(current_vec);
             if (angle > dynamic_body.angle_constraints) {
                 let axis = current_vec.cross(last_vec).normalize();
                 let new_vec = Quat::from_axis_angle(axis, angle - dynamic_body.angle_constraints)
                     * current_vec;
-                let new_pos = global_transforms.get(past_segment).unwrap().translation()
-                    + (new_vec * segment_lengths[i]);
-                let final_lerp = transforms
-                    .get(segment_to_change)
+                let new_pos = front_pos + (new_vec * segment_lengths[i]);
+                let final_lerp = back_pos.lerp(new_pos, dynamic_body.lerp_speed);
+                transforms
+                    .get_mut(nodes[i + 1].clone())
                     .unwrap()
-                    .translation
-                    .lerp(new_pos, dynamic_body.lerp_speed);
-                transforms.get_mut(segment_to_change).unwrap().translation = final_lerp;
+                    .translation = final_lerp;
                 last_vec = new_vec;
             } else {
                 last_vec = current_vec;
             }
         }
+    }
+}
+
+fn angle_constraints_calculator(
+    front_pos: Vec3,
+    back_pos: Vec3,
+    last_vec: Vec3,
+    angle_constraints: f32,
+    lerp_speed: f32,
+    segment_length: f32,
+) -> (Vec3, Vec3) {
+    let current_vec = (back_pos - front_pos).normalize();
+    let angle: f32 = last_vec.angle_between(current_vec);
+    if (angle > angle_constraints) {
+        let axis = current_vec.cross(last_vec).normalize();
+        let new_vec = Quat::from_axis_angle(axis, angle - angle_constraints) * current_vec;
+        let new_pos = front_pos + (new_vec * segment_length);
+        let final_lerp = back_pos.lerp(new_pos, lerp_speed);
+        return (new_vec, final_lerp);
+    } else {
+        return (current_vec, back_pos);
     }
 }
 
@@ -195,15 +214,54 @@ pub fn dynamic_body_calculator(
     dynamic_body_query: Query<&DynamicBody>,
 ) {
     for dynamic_body in dynamic_body_query.iter() {
-        for i in 0..dynamic_body.get_seg_len(){
+        let last_vec_transforms = global_transforms.get(dynamic_body.nodes[0]).unwrap();
+        let mut last_forward_vec = *last_vec_transforms.forward();
+        let mut last_vec = last_vec_transforms.translation();
+        let nodes = &dynamic_body.nodes;
+        let segment_lengths = &dynamic_body.seg_lengths;
+        let function = dynamic_body.function;
+
+        for i in 0..dynamic_body.get_seg_len() {
             //angle restrictions
-
-
+            let front_pos = global_transforms
+                .get(dynamic_body.nodes[i as usize].clone())
+                .unwrap()
+                .translation();
+            let back_pos = global_transforms
+                .get(dynamic_body.nodes[i as usize + 1].clone())
+                .unwrap()
+                .translation();
+            let (new_vec, new_pos) = angle_constraints_calculator(
+                front_pos,
+                back_pos,
+                last_forward_vec,
+                dynamic_body.angle_constraints,
+                dynamic_body.lerp_speed,
+                segment_lengths[i as usize],
+            );
+            transforms
+                .get_mut(nodes[i as usize + 1].clone())
+                .unwrap()
+                .translation = new_pos;
+            last_forward_vec = new_vec;
             //apply segment offset
-
+            let offset = function(i as i32);
+            transforms.get_mut(nodes[i as usize + 1].clone())
+                .unwrap()
+                .translation += offset;
+            /*
+            let mut node_transform = transforms.get_mut(node.clone()).unwrap();
+            node_transform.translation += offset;
+            
+             */
 
             //apply distance constraints LAST
+            let mut segment_transform = transforms.get_mut(nodes[i as usize + 1].clone()).unwrap();
 
+            let current_vec = segment_transform.translation;
+            let new_vec = distance_restraints(last_vec, current_vec, segment_lengths[i as usize]);
+            segment_transform.translation = new_vec;
+            last_vec = segment_transform.translation;
         }
     }
 }
@@ -344,7 +402,7 @@ pub fn procedural_animation_plugin(app: &mut App) {
     app.add_systems(PostStartup, setup_offset)
         .add_systems(
             Update,
-            (angle_constraints, node_mutator, calc_segment_pos).chain(),
+            dynamic_body_calculator,
         )
         .add_systems(Update, fabrik_calculator)
         .add_systems(Update, midpoint_filler);
