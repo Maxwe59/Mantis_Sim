@@ -111,5 +111,24 @@ pub fn create_mantis(
             Vec3::new(0.4, -0.2, 0.2),
             offset_entity,
         ),
+        
     ));
 }
+
+
+
+/*
+
+define mantis:
+abdomen is composed of dynamic body segments, on a linear downward path
+legs use fabrik algorithm, later add angle restrictions, and alternating step
+thorax should have breathing effect, increase rate of breathing the faster the mantis moves
+thorax movement:
+head should point to the direction of the mouse cursor, or as close in a dir as possible
+antenae should be composed of dynamic body segments (upward curve)
+pinchers should also use fabrik, different target. they should move towards the mouse
+
+
+
+
+*/
