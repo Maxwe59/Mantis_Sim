@@ -111,11 +111,8 @@ pub fn create_mantis(
             Vec3::new(0.4, -0.2, 0.2),
             offset_entity,
         ),
-        
     ));
 }
-
-
 
 /*
 

@@ -130,12 +130,11 @@ pub fn calc_segment_pos(
             .unwrap()
             .translation();
         for (i, segment) in nodes.iter().skip(1).enumerate() {
-            if let Ok(mut transform) = transforms.get_mut(segment.clone()) {
-                let current_vec = transform.translation;
-                let new_vec = distance_restraints(last_vec, current_vec, segment_lengths[i]);
-                transform.translation = new_vec;
-                last_vec = transform.translation;
-            }
+            let mut transform = transforms.get_mut(segment.clone()).unwrap();
+            let current_vec = transform.translation;
+            let new_vec = distance_restraints(last_vec, current_vec, segment_lengths[i]);
+            transform.translation = new_vec;
+            last_vec = transform.translation;
         }
     }
 }
@@ -195,15 +194,12 @@ pub fn dynamic_body_calculator(
     dynamic_body_query: Query<&DynamicBody>,
 ) {
     for dynamic_body in dynamic_body_query.iter() {
-        for i in 0..dynamic_body.get_seg_len(){
+        for i in 0..dynamic_body.get_seg_len() {
             //angle restrictions
-
 
             //apply segment offset
 
-
             //apply distance constraints LAST
-
         }
     }
 }
