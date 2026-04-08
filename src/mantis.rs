@@ -25,7 +25,7 @@ impl Mantis {
 }
 
 fn linear_downset(i: i32) -> Vec3 {
-    return Vec3::new(0.0, 0.0 - (i as f32 * 0.01), 0.0);
+    return Vec3::new(0.0, -1.0 * (i as f32 * 0.01), 0.0);
 }
 
 pub fn create_mantis(
@@ -80,6 +80,7 @@ pub fn create_mantis(
             10.0 * std::f32::consts::PI / 180.0,
             0.8,
             head_id,
+            linear_downset,
         ),
         SegmentFiller::new(segments_cloned, midpoint_segments, Vec3::Y),
         NodeOffsetter::new(segments_cloned2, linear_downset),
