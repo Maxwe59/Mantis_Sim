@@ -1,5 +1,6 @@
-use crate::proc_anim::{DynamicBody, FabrikJoint, NodeOffsetter, PivotEntity, SegmentFiller};
+use crate::proc_anim::{DynamicBody, FabrikJoint, PivotEntity, SegmentFiller};
 use bevy::prelude::*;
+
 
 #[derive(Component)]
 pub struct Mantis {
@@ -24,8 +25,8 @@ impl Mantis {
     }
 }
 
-fn linear_downset(i: i32) -> Vec3 {
-    return Vec3::new(0.0, -1.0 * (i as f32 * 0.01), 0.0);
+fn linear_downset(i: i32, prev_vec: Vec3) -> Vec3 {
+    return Vec3::new(0.0, prev_vec.y - 0.2, 0.0);
 }
 
 pub fn create_mantis(
@@ -33,6 +34,7 @@ pub fn create_mantis(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+
     //center of mass placeholder
     let center_of_mass = Vec3::new(0.0, 0.5, 0.0);
     let head_id = commands
@@ -72,7 +74,6 @@ pub fn create_mantis(
         }
     }
     let segments_cloned = segments.clone();
-    let segments_cloned2 = segments.clone();
     commands.spawn((
         DynamicBody::new(
             seg_lens,
@@ -83,7 +84,6 @@ pub fn create_mantis(
             linear_downset,
         ),
         SegmentFiller::new(segments_cloned, midpoint_segments, Vec3::Y),
-        NodeOffsetter::new(segments_cloned2, linear_downset),
     ));
 
     //create fabrik joinnt

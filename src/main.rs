@@ -29,8 +29,8 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Startup, create_mantis)
         .add_systems(Startup, add_plane)
-        .add_plugins(EguiPlugin::default())
-        .add_plugins(WorldInspectorPlugin::new())
+        //.add_plugins(EguiPlugin::default())
+        //.add_plugins(WorldInspectorPlugin::new())
         .run();
 }
 
