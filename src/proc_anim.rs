@@ -22,7 +22,7 @@ pub struct DynamicBody {
     nodes: Vec<Entity>,    //vec length should be seg_count - 1
     angle_constraints: f32,
     lerp_speed: f32,
-    anchor_entity: Entity
+    anchor_entity: Entity,
 }
 
 #[derive(Component)]
@@ -145,6 +145,35 @@ pub fn calc_segment_pos(
     }
 }
 
+/*
+prev_vector -> previous vector in the change, vector being measured to current vector
+front_pos/backpos -> positions of 2 segments, they make up the current vector
+angle_constraint -> max angle between prev_vector and current_vec
+
+returns (vector,position)
+*/
+
+fn calc_angle_constraints(
+    prev_vec: Vec3,
+    front_pos: Vec3,
+    back_pos: Vec3,
+    angle_constraint: f32,
+    lerp_speed: f32,
+    segment_length: f32,
+) -> (Vec3, Vec3) {
+    let current_vec = (back_pos - front_pos).normalize();
+    let angle = prev_vec.angle_between(current_vec);
+    if (angle > angle_constraint) {
+        let axis = current_vec.cross(prev_vec).normalize();
+        let new_vec = Quat::from_axis_angle(axis, angle - angle_constraint) * current_vec;
+        let new_pos = front_pos + (new_vec * segment_length);
+        let final_lerp = back_pos.lerp(new_pos, lerp_speed);
+        return (new_vec, final_lerp);
+    } else {
+        return (current_vec, back_pos);
+    }
+}
+
 pub fn angle_constraints(
     dynamic_body_query: Query<&DynamicBody>,
     mut transforms: Query<&mut Transform>,
@@ -170,26 +199,16 @@ pub fn angle_constraints(
                 .unwrap()
                 .translation();
 
-            let current_vec = (back_pos - front_pos).normalize();
-            let angle = last_vec.angle_between(current_vec);
-            let segment_to_change = nodes[i + 1].clone();
-            let past_segment = nodes[i].clone();
-            if (angle > dynamic_body.angle_constraints) {
-                let axis = current_vec.cross(last_vec).normalize();
-                let new_vec = Quat::from_axis_angle(axis, angle - dynamic_body.angle_constraints)
-                    * current_vec;
-                let new_pos = global_transforms.get(past_segment).unwrap().translation()
-                    + (new_vec * segment_lengths[i]);
-                let final_lerp = transforms
-                    .get(segment_to_change)
-                    .unwrap()
-                    .translation
-                    .lerp(new_pos, dynamic_body.lerp_speed);
-                transforms.get_mut(segment_to_change).unwrap().translation = final_lerp;
-                last_vec = new_vec;
-            } else {
-                last_vec = current_vec;
-            }
+            let (new_vec, new_pos) = calc_angle_constraints(
+                last_vec,
+                front_pos,
+                back_pos,
+                dynamic_body.angle_constraints,
+                dynamic_body.lerp_speed,
+                segment_lengths[i],
+            );
+            transforms.get_mut(nodes[i + 1]).unwrap().translation = new_pos;
+            last_vec = new_vec;
         }
     }
 }

@@ -74,7 +74,13 @@ pub fn create_mantis(
     let segments_cloned = segments.clone();
     let segments_cloned2 = segments.clone();
     commands.spawn((
-        DynamicBody::new(seg_lens, segments, 10.0 * std::f32::consts::PI / 180.0, 0.8, head_id),
+        DynamicBody::new(
+            seg_lens,
+            segments,
+            10.0 * std::f32::consts::PI / 180.0,
+            0.8,
+            head_id,
+        ),
         SegmentFiller::new(segments_cloned, midpoint_segments, Vec3::Y),
         NodeOffsetter::new(segments_cloned2, linear_downset),
     ));
