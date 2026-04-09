@@ -1,6 +1,18 @@
 use crate::proc_anim::{DynamicBody, FabrikJoint, PivotEntity, SegmentFiller};
 use bevy::prelude::*;
 
+macro_rules! spawn_basic {
+    ($commands:expr, $meshes:expr, $materials:expr, $mesh:expr, $color:expr, $pos:expr) => {
+        $commands.spawn((
+            Mesh3d($meshes.add($mesh)),
+            MeshMaterial3d($materials.add($color)),
+            Transform::from_translation($pos),
+        ))
+    };
+}
+
+
+
 #[derive(Component)]
 pub struct Mantis {
     pub speed: f32,
@@ -35,25 +47,29 @@ pub fn create_mantis(
 ) {
     //center of mass placeholder
     let center_of_mass = Vec3::new(0.0, 0.5, 0.0);
-    let head_id = commands
-        .spawn((
-            Mantis {
-                speed: 5.0,
-                init_center_of_mass: center_of_mass,
-            },
-            Mesh3d(meshes.add(Sphere::new(0.1))),
-            MeshMaterial3d(materials.add(Color::srgb_u8(255, 255, 255))),
-            Transform::from_xyz(center_of_mass.x, center_of_mass.y, center_of_mass.z),
-        ))
-        .id();
+
+    let head_id = spawn_basic!(
+        commands,
+        meshes,
+        materials,
+        Sphere::new(0.1),
+        Color::srgb_u8(255, 255, 255),
+        center_of_mass
+    )
+    .insert(Mantis {
+        speed: 5.0,
+        init_center_of_mass: center_of_mass,
+    })
+    .id();
 
     //static head
-
-    let static_head = commands.spawn((
-        Mesh3d(meshes.add(Sphere::new(0.1))),
-        MeshMaterial3d(materials.add(Color::srgb_u8(255, 255, 255))),
-    )).id();
-    commands.spawn(PivotEntity::new(head_id, Vec3::new(0.0, 0.1, -0.2), static_head));
+    let static_head = spawn_basic!(commands, meshes, materials, Sphere::new(0.1), Color::srgb_u8(255, 255, 255), Vec3::ZERO)
+        .id();
+    commands.spawn(PivotEntity::new(
+        head_id,
+        Vec3::new(0.0, 0.1, -0.2),
+        static_head,
+    ));
 
     //create dynamic body
     let seg_lens = vec![0.2; 5];
