@@ -1,7 +1,6 @@
 use crate::proc_anim::{DynamicBody, FabrikJoint, PivotEntity, SegmentFiller};
 use bevy::prelude::*;
 
-
 #[derive(Component)]
 pub struct Mantis {
     pub speed: f32,
@@ -26,7 +25,7 @@ impl Mantis {
 }
 
 fn linear_downset(i: i32, prev_vec: Vec3) -> Vec3 {
-    return Vec3::new(0.0, prev_vec.y - 0.2, 0.0);
+    return Vec3::new(0.0, prev_vec.y - 0.1, 0.0);
 }
 
 pub fn create_mantis(
@@ -34,7 +33,6 @@ pub fn create_mantis(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-
     //center of mass placeholder
     let center_of_mass = Vec3::new(0.0, 0.5, 0.0);
     let head_id = commands
@@ -49,8 +47,16 @@ pub fn create_mantis(
         ))
         .id();
 
+    //static head
+
+    let static_head = commands.spawn((
+        Mesh3d(meshes.add(Sphere::new(0.1))),
+        MeshMaterial3d(materials.add(Color::srgb_u8(255, 255, 255))),
+    )).id();
+    commands.spawn(PivotEntity::new(head_id, Vec3::new(0.0, 0.1, -0.2), static_head));
+
     //create dynamic body
-    let seg_lens = vec![0.4; 10];
+    let seg_lens = vec![0.2; 5];
     let mut segments = Vec::new();
     let mut midpoint_segments = Vec::new();
     for i in 0..seg_lens.len() + 1 {
@@ -66,7 +72,7 @@ pub fn create_mantis(
         if (i < seg_lens.len()) {
             let midpoint_id = commands
                 .spawn((
-                    Mesh3d(meshes.add(Cylinder::new(0.15, seg_lens[i]))),
+                    Mesh3d(meshes.add(Cylinder::new(0.09, seg_lens[i]))),
                     MeshMaterial3d(materials.add(Color::srgb_u8(255, 124, 144))),
                 ))
                 .id();
@@ -113,8 +119,38 @@ pub fn create_mantis(
             segments,
             0.5,
             0.7,
-            Vec3::new(0.4, -0.2, 0.2),
+            Vec3::new(0.4, -0.2, -0.3),
             offset_entity,
+        ),
+    ));
+
+    let seg_lens2 = vec![0.2, 0.2, 0.2];
+    let mut segments2 = Vec::new();
+    for i in 0..seg_lens2.len() + 1 {
+        let segment_id = commands
+            .spawn((
+                Mesh3d(meshes.add(Sphere::new(0.1))),
+                MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+                Transform::from_xyz(i as f32, 0.5, 0.0),
+            ))
+            .id();
+        segments2.push(segment_id);
+    }
+    let offset_entity2 = commands
+        .spawn((
+            Mesh3d(meshes.add(Sphere::new(0.1))),
+            MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+        ))
+        .id();
+    commands.spawn((
+        PivotEntity::new(head_id, Vec3::new(-0.2, 0.0, 0.0), offset_entity2),
+        FabrikJoint::new_with_default(
+            seg_lens2,
+            segments2,
+            0.5,
+            0.7,
+            Vec3::new(-0.4, -0.2, -0.3),
+            offset_entity2,
         ),
     ));
 }
@@ -130,6 +166,10 @@ head should point to the direction of the mouse cursor, or as close in a dir as 
 antenae should be composed of dynamic body segments (upward curve)
 pinchers should also use fabrik, different target. they should move towards the mouse
 
+
+todo:
+add angle restrictions to fabrik
+breathing effect
 
 
 
