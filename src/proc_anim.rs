@@ -43,24 +43,45 @@ pub struct SegmentFiller {
 
 #[derive(Component)]
 pub struct FabrikJoint {
+    //descriptor variables used to describe the joint behavior
     seg_lengths: Vec<f32>,
     nodes: Vec<Entity>,
     max_target_dist: f32, //max distance target (foot) can get from target_pos (global space)
     lerp_speed: f32,
     target_offset: Vec3,   //relative to anchor position (segments[0]),
     anchor_entity: Entity, //entity the fabrik joint is anchored to.
-    fabrik_iterations: i32,
     //interal variables used to calculate states
-    stepping: bool,
-    new_target_pos: Vec3, //used to lerp between the old target_pos and new_target_pos, when stepping is true.
-    curr_target_pos: Vec3, //used to track foot location
+    fabrik_iterations: i32,
+    stepping: bool,        //when joint is stepping phase
+    new_target_pos: Vec3, //the new foot position, when stepping is complete, curr_target becomes equal to this
+    curr_target_pos: Vec3, //tracks current foot position. needed because foot doesn't move unless stepping
     t_val: f32,
+    can_step: bool, //tracks if fabrik joint even steps in the first place. useful for alternating joints stepping
+    just_finished_stepping: bool, //true when joint just finished stepping. has to be manually set to false to be reset
 }
 
+#[derive(Component)]
+pub struct FabrikSync {
+    left_joint: Entity,
+    right_joint: Entity,
+    current_joint: Entity,
+}
+
+impl FabrikSync {
+    pub fn new_with_default(left_joint: Entity, right_joint: Entity) -> Self {
+        return Self {
+            left_joint: left_joint,
+            right_joint: right_joint,
+            current_joint: left_joint,
+        };
+    }
+}
+
+impl_new!(FabrikSync, left_joint: Entity, right_joint: Entity, current_joint: Entity );
 impl_new!(SegmentFiller, nodes: Vec<Entity>, midpoints: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(PivotEntity, head: Entity, offset: Vec3, child: Entity);
 impl_new!(DynamicBody, seg_lengths: Vec<f32>, nodes: Vec<Entity>, angle_constraints: f32, lerp_speed: f32, anchor_entity: Entity, slope_func: fn(i32, Vec3) -> Vec3);
-impl_new!(FabrikJoint, seg_lengths: Vec<f32>, nodes: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_offset: Vec3, anchor_entity: Entity, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, curr_target_pos: Vec3, t_val: f32);
+impl_new!(FabrikJoint, seg_lengths: Vec<f32>, nodes: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_offset: Vec3, anchor_entity: Entity, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, curr_target_pos: Vec3, t_val: f32, can_step: bool, just_finished_stepping: bool);
 
 impl FabrikJoint {
     pub fn new_with_default(
@@ -83,6 +104,8 @@ impl FabrikJoint {
             new_target_pos: Vec3::ZERO,
             curr_target_pos: Vec3::ZERO,
             t_val: 0.0,
+            can_step: true,
+            just_finished_stepping: false,
         };
     }
 }
@@ -206,6 +229,37 @@ pub fn dynamic_body_calculator(
     }
 }
 
+pub fn fabrik_syncer(
+    mut sync_query: Query<&mut FabrikSync>,
+    mut fabrik_query: Query<&mut FabrikJoint>,
+) {
+    for mut syncer in sync_query.iter_mut() {
+        let left = syncer.left_joint;
+        let right = syncer.right_joint;
+
+        let current_stepping = syncer.current_joint;
+
+        let mut fabrik_current = fabrik_query.get_mut(current_stepping).unwrap();
+        let mut next_to_step = if current_stepping == left {
+            (right, false)
+        } else {
+            (left, false)
+        };
+        if fabrik_current.just_finished_stepping == true {
+            fabrik_current.can_step = false;
+            next_to_step.1 = true;
+            fabrik_current.just_finished_stepping = false;
+        }
+
+        if next_to_step.1 {
+            syncer.current_joint = next_to_step.0;
+            let mut fabrik_next = fabrik_query.get_mut(next_to_step.0).unwrap();
+            fabrik_next.can_step = true;
+            fabrik_next.just_finished_stepping = false;
+        }
+    }
+}
+
 pub fn fabrik_calculator(
     mut fabrik_query: Query<&mut FabrikJoint>,
     mut transforms: Query<&mut Transform>,
@@ -226,7 +280,9 @@ pub fn fabrik_calculator(
             .unwrap()
             .translation();
 
-        if fabrik_joint.max_target_dist < fabrik_joint.curr_target_pos.distance(updated_target) {
+        if fabrik_joint.max_target_dist < fabrik_joint.curr_target_pos.distance(updated_target)
+            && fabrik_joint.can_step
+        {
             //implement lerping logic
             fabrik_joint.stepping = true;
             fabrik_joint.new_target_pos = updated_target;
@@ -242,6 +298,7 @@ pub fn fabrik_calculator(
                 .lerp(fabrik_joint.new_target_pos, fabrik_joint.t_val);
             //reset stepping to false
             if fabrik_joint.t_val >= 1.0 {
+                fabrik_joint.just_finished_stepping = true;
                 fabrik_joint.stepping = false;
             }
         }
@@ -327,8 +384,14 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
 }
 
 pub fn procedural_animation_plugin(app: &mut App) {
-    app.add_systems(PostStartup, setup_offset)
-        .add_systems(Update, dynamic_body_calculator)
-        .add_systems(Update, fabrik_calculator)
-        .add_systems(Update, midpoint_filler);
+    app.add_systems(PostStartup, setup_offset).add_systems(
+        Update,
+        (
+            dynamic_body_calculator,
+            fabrik_calculator,
+            fabrik_syncer,
+            midpoint_filler,
+        )
+            .chain(),
+    );
 }

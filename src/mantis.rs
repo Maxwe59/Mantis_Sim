@@ -1,4 +1,4 @@
-use crate::proc_anim::{DynamicBody, FabrikJoint, PivotEntity, SegmentFiller};
+use crate::proc_anim::{DynamicBody, FabrikJoint, FabrikSync, PivotEntity, SegmentFiller};
 use bevy::prelude::*;
 
 macro_rules! spawn_basic {
@@ -10,8 +10,6 @@ macro_rules! spawn_basic {
         ))
     };
 }
-
-
 
 #[derive(Component)]
 pub struct Mantis {
@@ -57,14 +55,21 @@ pub fn create_mantis(
         center_of_mass
     )
     .insert(Mantis {
-        speed: 5.0,
+        speed: 4.0,
         init_center_of_mass: center_of_mass,
     })
     .id();
 
     //static head
-    let static_head = spawn_basic!(commands, meshes, materials, Sphere::new(0.1), Color::srgb_u8(255, 255, 255), Vec3::ZERO)
-        .id();
+    let static_head = spawn_basic!(
+        commands,
+        meshes,
+        materials,
+        Sphere::new(0.1),
+        Color::srgb_u8(255, 255, 255),
+        Vec3::ZERO
+    )
+    .id();
     commands.spawn(PivotEntity::new(
         head_id,
         Vec3::new(0.0, 0.1, -0.2),
@@ -128,17 +133,19 @@ pub fn create_mantis(
             MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         ))
         .id();
-    commands.spawn((
-        PivotEntity::new(head_id, Vec3::new(0.2, 0.0, 0.0), offset_entity),
-        FabrikJoint::new_with_default(
-            seg_lens,
-            segments,
-            0.5,
-            0.7,
-            Vec3::new(0.4, -0.2, -0.3),
-            offset_entity,
-        ),
-    ));
+    let fabrik_1 = commands
+        .spawn((
+            PivotEntity::new(head_id, Vec3::new(0.2, 0.0, 0.0), offset_entity),
+            FabrikJoint::new_with_default(
+                seg_lens,
+                segments,
+                0.7,
+                0.2,
+                Vec3::new(0.4, -0.2, -0.3),
+                offset_entity,
+            ),
+        ))
+        .id();
 
     let seg_lens2 = vec![0.2, 0.2, 0.2];
     let mut segments2 = Vec::new();
@@ -158,17 +165,20 @@ pub fn create_mantis(
             MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         ))
         .id();
-    commands.spawn((
-        PivotEntity::new(head_id, Vec3::new(-0.2, 0.0, 0.0), offset_entity2),
-        FabrikJoint::new_with_default(
-            seg_lens2,
-            segments2,
-            0.5,
-            0.7,
-            Vec3::new(-0.4, -0.2, -0.3),
-            offset_entity2,
-        ),
-    ));
+    let farbik_2 = commands
+        .spawn((
+            PivotEntity::new(head_id, Vec3::new(-0.2, 0.0, 0.0), offset_entity2),
+            FabrikJoint::new_with_default(
+                seg_lens2,
+                segments2,
+                0.7,
+                0.2,
+                Vec3::new(-0.4, -0.2, -0.3),
+                offset_entity2,
+            ),
+        ))
+        .id();
+    commands.spawn(FabrikSync::new_with_default(fabrik_1, farbik_2));
 }
 
 /*
