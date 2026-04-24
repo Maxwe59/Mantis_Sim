@@ -324,19 +324,16 @@ pub fn fabrik_calculator(
                 .unwrap()
                 .translation = fabrik_joint.curr_target_pos;
             for i in (0..(fabrik_joint.nodes.len() - 1)).rev() {
-                let point1 = transforms
-                    .get(fabrik_joint.nodes[i].clone())
-                    .unwrap()
-                    .translation;
-                let point2 = transforms
+                let vec_static = transforms
                     .get(fabrik_joint.nodes[i + 1].clone())
                     .unwrap()
                     .translation;
-                let new_vec = (point1 - point2).normalize() * fabrik_joint.seg_lengths[i];
-                transforms
-                    .get_mut(fabrik_joint.nodes[i].clone())
-                    .unwrap()
-                    .translation = point2 + new_vec;
+                let mut vec_to_move = transforms.get_mut(fabrik_joint.nodes[i].clone()).unwrap();
+                vec_to_move.translation = distance_restraints(
+                    vec_static,
+                    vec_to_move.translation,
+                    fabrik_joint.seg_lengths[i],
+                );
             }
             //frontpass
             transforms
@@ -344,19 +341,16 @@ pub fn fabrik_calculator(
                 .unwrap()
                 .translation = anchor_pos;
             for i in 1..fabrik_joint.nodes.len() {
-                let point1 = transforms
-                    .get(fabrik_joint.nodes[i].clone())
-                    .unwrap()
-                    .translation;
-                let point2 = transforms
+                let vec_static = transforms
                     .get(fabrik_joint.nodes[i - 1].clone())
                     .unwrap()
                     .translation;
-                let new_vec = (point1 - point2).normalize() * fabrik_joint.seg_lengths[i - 1];
-                transforms
-                    .get_mut(fabrik_joint.nodes[i].clone())
-                    .unwrap()
-                    .translation = point2 + new_vec;
+                let mut vec_to_move = transforms.get_mut(fabrik_joint.nodes[i].clone()).unwrap();
+                vec_to_move.translation = distance_restraints(
+                    vec_static,
+                    vec_to_move.translation,
+                    fabrik_joint.seg_lengths[i - 1],
+                );
             }
         }
     }
