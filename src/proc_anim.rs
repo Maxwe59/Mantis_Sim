@@ -53,8 +53,8 @@ pub struct FabrikJoint {
     //interal variables used to calculate states
     fabrik_iterations: i32,
     stepping: bool, //when joint is stepping phase
-    new_target_pos: Vec3, //used to lerp between the old target_pos and new_target_pos, when stepping is true.
-    curr_target_pos: Vec3, //used to track foot location
+    new_target_pos: Vec3, //the new foot position, when stepping is complete, curr_target becomes equal to this
+    curr_target_pos: Vec3, //tracks current foot position. needed because foot doesn't move unless stepping
     t_val: f32,
     can_step: bool, //tracks if fabrik joint even steps in the first place. useful for alternating joints stepping
     just_finished_stepping: bool //true when joint just finished stepping. has to be manually set to false to be reset
@@ -275,7 +275,6 @@ pub fn fabrik_calculator(
             .unwrap()
             .translation();
 
-        println!("distance_from_target");
         if fabrik_joint.max_target_dist < fabrik_joint.curr_target_pos.distance(updated_target)
             && fabrik_joint.can_step
         {

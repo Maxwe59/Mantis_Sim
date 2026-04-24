@@ -138,7 +138,7 @@ pub fn create_mantis(
         FabrikJoint::new_with_default(
             seg_lens,
             segments,
-            1.0,
+            0.7,
             0.2,
             Vec3::new(0.4, -0.2, -0.3),
             offset_entity,
@@ -168,7 +168,7 @@ pub fn create_mantis(
         FabrikJoint::new_with_default(
             seg_lens2,
             segments2,
-            1.0,
+            0.7,
             0.2,
             Vec3::new(-0.4, -0.2, -0.3),
             offset_entity2,
