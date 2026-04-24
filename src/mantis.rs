@@ -100,85 +100,69 @@ pub fn create_mantis(
             midpoint_segments.push(midpoint_id);
         }
     }
-    let segments_cloned = segments.clone();
     commands.spawn((
         DynamicBody::new(
             seg_lens,
-            segments,
+            segments.clone(),
             10.0 * std::f32::consts::PI / 180.0,
             0.8,
             head_id,
             linear_downset,
         ),
-        SegmentFiller::new(segments_cloned, midpoint_segments, Vec3::Y),
+        SegmentFiller::new(segments.clone(), midpoint_segments, Vec3::Y),
     ));
 
     //create fabrik joinnt
+    let rad_constraints: Vec<f32> = vec![0.2, 0.2, 0.2];
 
     let seg_lens = vec![0.2, 0.2, 0.2];
-    let mut segments = Vec::new();
-    for i in 0..seg_lens.len() + 1 {
-        let segment_id = commands
+    let mut both_segments: [Vec<Entity>; 2] = [Vec::new(), Vec::new()];
+    let mut both_offset_entities: [Entity; 2] = [Entity::PLACEHOLDER; 2];
+    for j in 0..2 {
+        for i in 0..seg_lens.len() + 1 {
+            let segment_id = commands
+                .spawn((
+                    Mesh3d(meshes.add(Sphere::new(0.1))),
+                    MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
+                    Transform::from_xyz(i as f32, 0.5, 0.0),
+                ))
+                .id();
+            both_segments[j].push(segment_id);
+        }
+        let offset_entity = commands
             .spawn((
                 Mesh3d(meshes.add(Sphere::new(0.1))),
                 MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-                Transform::from_xyz(i as f32, 0.5, 0.0),
             ))
             .id();
-        segments.push(segment_id);
+        both_offset_entities[j] = offset_entity;
     }
-    let offset_entity = commands
-        .spawn((
-            Mesh3d(meshes.add(Sphere::new(0.1))),
-            MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-        ))
-        .id();
-    let fabrik_1 = commands
-        .spawn((
-            PivotEntity::new(head_id, Vec3::new(0.2, 0.0, 0.0), offset_entity),
-            FabrikJoint::new_with_default(
-                seg_lens,
-                segments,
-                0.7,
-                0.2,
-                Vec3::new(0.4, -0.2, -0.3),
-                offset_entity,
-            ),
-        ))
-        .id();
 
-    let seg_lens2 = vec![0.2, 0.2, 0.2];
-    let mut segments2 = Vec::new();
-    for i in 0..seg_lens2.len() + 1 {
-        let segment_id = commands
+    let mut fabriks = [Entity::PLACEHOLDER; 2];
+    for i in 0..2 {
+        let m = if i == 0 { 1.0 } else { -1.0 };
+        let fabrik = commands
             .spawn((
-                Mesh3d(meshes.add(Sphere::new(0.1))),
-                MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-                Transform::from_xyz(i as f32, 0.5, 0.0),
+                PivotEntity::new(
+                    head_id,
+                    Vec3::new(0.2 * m, 0.0, 0.0),
+                    both_offset_entities[i],
+                ),
+                FabrikJoint::new_with_default(
+                    seg_lens.clone(),
+                    both_segments[i].clone(),
+                    0.7,
+                    0.2,
+                    Vec3::new(0.4 * m, -0.2, -0.3),
+                    both_offset_entities[i],
+                    rad_constraints.clone(),
+                ),
             ))
             .id();
-        segments2.push(segment_id);
+        fabriks[i] = fabrik;
     }
-    let offset_entity2 = commands
-        .spawn((
-            Mesh3d(meshes.add(Sphere::new(0.1))),
-            MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
-        ))
-        .id();
-    let farbik_2 = commands
-        .spawn((
-            PivotEntity::new(head_id, Vec3::new(-0.2, 0.0, 0.0), offset_entity2),
-            FabrikJoint::new_with_default(
-                seg_lens2,
-                segments2,
-                0.7,
-                0.2,
-                Vec3::new(-0.4, -0.2, -0.3),
-                offset_entity2,
-            ),
-        ))
-        .id();
-    commands.spawn(FabrikSync::new_with_default(fabrik_1, farbik_2));
+
+    commands.spawn(FabrikSync::new_with_default(fabriks[0], fabriks[1]));
 }
 
 /*

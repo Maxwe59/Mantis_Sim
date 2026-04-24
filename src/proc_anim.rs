@@ -65,6 +65,7 @@ pub struct FabrikJoint {
     lerp_speed: f32,
     target_offset: Vec3,   //relative to anchor position (segments[0]),
     anchor_entity: Entity, //entity the fabrik joint is anchored to.
+    angle_constraints: Vec<f32>,
     //interal variables used to calculate states
     fabrik_iterations: i32,
     stepping: bool,        //when joint is stepping phase
@@ -93,7 +94,8 @@ impl_new!(FabrikJoint, [
         max_target_dist: f32,
         lerp_speed: f32,
         target_offset: Vec3,
-        anchor_entity: Entity],
+        anchor_entity: Entity,
+        angle_constraints: Vec<f32>],
         
         [fabrik_iterations = 5, 
         stepping = false, 
