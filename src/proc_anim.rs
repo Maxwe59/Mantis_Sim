@@ -52,24 +52,28 @@ pub struct FabrikJoint {
     anchor_entity: Entity, //entity the fabrik joint is anchored to.
     //interal variables used to calculate states
     fabrik_iterations: i32,
-    stepping: bool, //when joint is stepping phase
+    stepping: bool,        //when joint is stepping phase
     new_target_pos: Vec3, //the new foot position, when stepping is complete, curr_target becomes equal to this
     curr_target_pos: Vec3, //tracks current foot position. needed because foot doesn't move unless stepping
     t_val: f32,
     can_step: bool, //tracks if fabrik joint even steps in the first place. useful for alternating joints stepping
-    just_finished_stepping: bool //true when joint just finished stepping. has to be manually set to false to be reset
+    just_finished_stepping: bool, //true when joint just finished stepping. has to be manually set to false to be reset
 }
 
 #[derive(Component)]
 pub struct FabrikSync {
     left_joint: Entity,
     right_joint: Entity,
-    current_joint: Entity
+    current_joint: Entity,
 }
 
-impl FabrikSync{
-    pub fn new_with_default(left_joint: Entity, right_joint: Entity)-> Self{
-        return Self { left_joint: left_joint, right_joint: right_joint, current_joint: left_joint }
+impl FabrikSync {
+    pub fn new_with_default(left_joint: Entity, right_joint: Entity) -> Self {
+        return Self {
+            left_joint: left_joint,
+            right_joint: right_joint,
+            current_joint: left_joint,
+        };
     }
 }
 
@@ -101,7 +105,7 @@ impl FabrikJoint {
             curr_target_pos: Vec3::ZERO,
             t_val: 0.0,
             can_step: true,
-            just_finished_stepping: false
+            just_finished_stepping: false,
         };
     }
 }
@@ -236,22 +240,23 @@ pub fn fabrik_syncer(
         let current_stepping = syncer.current_joint;
 
         let mut fabrik_current = fabrik_query.get_mut(current_stepping).unwrap();
-        let mut next_to_step = if current_stepping == left { (right, false)} else {(left, false)};
-        if fabrik_current.just_finished_stepping == true{
+        let mut next_to_step = if current_stepping == left {
+            (right, false)
+        } else {
+            (left, false)
+        };
+        if fabrik_current.just_finished_stepping == true {
             fabrik_current.can_step = false;
             next_to_step.1 = true;
             fabrik_current.just_finished_stepping = false;
         }
 
-        if next_to_step.1{
+        if next_to_step.1 {
             syncer.current_joint = next_to_step.0;
             let mut fabrik_next = fabrik_query.get_mut(next_to_step.0).unwrap();
             fabrik_next.can_step = true;
             fabrik_next.just_finished_stepping = false;
-
         }
-
-        
     }
 }
 
@@ -379,9 +384,14 @@ fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Ve
 }
 
 pub fn procedural_animation_plugin(app: &mut App) {
-    app.add_systems(PostStartup, setup_offset)
-        .add_systems(Update, dynamic_body_calculator)
-        .add_systems(Update, fabrik_calculator)
-        .add_systems(Update, midpoint_filler)
-        .add_systems(Update, fabrik_syncer);
+    app.add_systems(PostStartup, setup_offset).add_systems(
+        Update,
+        (
+            dynamic_body_calculator,
+            fabrik_calculator,
+            fabrik_syncer,
+            midpoint_filler,
+        )
+            .chain(),
+    );
 }
