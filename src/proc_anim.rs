@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 macro_rules! impl_new {
+    //all manual values, you must manually fill all fields
     ($t:ty, $($field:ident : $ftype:ty),*) => {
         impl $t {
             pub fn new($($field: $ftype),*) -> Self {
@@ -10,7 +11,21 @@ macro_rules! impl_new {
             }
         }
     };
+
+    //some default fields
+    ($t:ty, [$($field:ident : $ftype:ty),*], [$($def_field:ident = $def_val:expr),*]) => {
+    impl $t {
+        pub fn new_with_default($($field: $ftype),*) -> Self {
+            Self {
+                $($field,)*
+                $($def_field: $def_val),*
+                }
+            }
+        }
+    };
+
 }
+
 /*
 Both FabrikJoint and DynamicBody assume the first segment[0] will be anchored to a "head" entity,
 revolving around the head entity. (Assuming both need the component OffSetter)
@@ -64,68 +79,49 @@ pub struct FabrikJoint {
 pub struct FabrikSync {
     left_joint: Entity,
     right_joint: Entity,
-    current_joint: Entity,
+    current_joint: bool, //doesn't really matter what bool equals left/right, needed to distiguish between left/right
 }
 
-impl FabrikSync {
-    pub fn new_with_default(left_joint: Entity, right_joint: Entity) -> Self {
-        return Self {
-            left_joint: left_joint,
-            right_joint: right_joint,
-            current_joint: left_joint,
-        };
-    }
-}
-
-impl_new!(FabrikSync, left_joint: Entity, right_joint: Entity, current_joint: Entity );
 impl_new!(SegmentFiller, nodes: Vec<Entity>, midpoints: Vec<Entity>, vec_dir_segment: Vec3);
 impl_new!(PivotEntity, head: Entity, offset: Vec3, child: Entity);
 impl_new!(DynamicBody, seg_lengths: Vec<f32>, nodes: Vec<Entity>, angle_constraints: f32, lerp_speed: f32, anchor_entity: Entity, slope_func: fn(i32, Vec3) -> Vec3);
-impl_new!(FabrikJoint, seg_lengths: Vec<f32>, nodes: Vec<Entity>, max_target_dist: f32, lerp_speed: f32, target_offset: Vec3, anchor_entity: Entity, fabrik_iterations: i32, stepping: bool, new_target_pos: Vec3, curr_target_pos: Vec3, t_val: f32, can_step: bool, just_finished_stepping: bool);
+impl_new!(FabrikSync, [left_joint: Entity, right_joint: Entity], [current_joint = false] );
 
-impl FabrikJoint {
-    pub fn new_with_default(
+impl_new!(FabrikJoint, [
         seg_lengths: Vec<f32>,
         nodes: Vec<Entity>,
         max_target_dist: f32,
         lerp_speed: f32,
         target_offset: Vec3,
-        anchor_entity: Entity,
-    ) -> Self {
-        return Self {
-            seg_lengths: seg_lengths,
-            nodes: nodes,
-            max_target_dist: max_target_dist,
-            lerp_speed: lerp_speed,
-            target_offset: target_offset,
-            anchor_entity: anchor_entity,
-            fabrik_iterations: 5,
-            stepping: false,
-            new_target_pos: Vec3::ZERO,
-            curr_target_pos: Vec3::ZERO,
-            t_val: 0.0,
-            can_step: true,
-            just_finished_stepping: false,
-        };
-    }
+        anchor_entity: Entity],
+        
+        [fabrik_iterations = 5, 
+        stepping = false, 
+        new_target_pos = Vec3::ZERO, 
+        curr_target_pos = Vec3::ZERO, 
+        t_val = 0.0, 
+        can_step = true, 
+        just_finished_stepping = false]);
+
+/*
+procedural animation plugin
+*/
+pub fn procedural_animation_plugin(app: &mut App) {
+    app.add_systems(PostStartup, setup_offset).add_systems(
+        Update,
+        (
+            dynamic_body_calculator,
+            fabrik_calculator,
+            fabrik_syncer,
+            midpoint_filler,
+        )
+            .chain(),
+    );
 }
 
-pub fn setup_offset(
-    pivot_query: Query<&PivotEntity>,
-    mut commands: Commands,
-    mut transforms: Query<&mut Transform>,
-) {
-    for pivotter in pivot_query.iter() {
-        //first set child/parent relationship
-        commands
-            .entity(pivotter.child)
-            .insert(ChildOf(pivotter.head));
-        //transform child to parent 0
-        transforms.get_mut(pivotter.child).unwrap().translation = Vec3::ZERO;
-        //apply offset
-        transforms.get_mut(pivotter.child).unwrap().translation = pivotter.offset;
-        //transforms.get_mut(pivotter.child).unwrap().translation.y += 0.5; //temporary, should be based on center of mass
-    }
+fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Vec3 {
+    let dir = (vec_to_move - vec_static).normalize() * distance;
+    return dir + vec_static;
 }
 
 /*
@@ -154,6 +150,24 @@ fn calc_angle_constraints(
         return (new_vec, final_lerp);
     } else {
         return (current_vec, back_pos);
+    }
+}
+
+pub fn setup_offset(
+    pivot_query: Query<&PivotEntity>,
+    mut commands: Commands,
+    mut transforms: Query<&mut Transform>,
+) {
+    for pivotter in pivot_query.iter() {
+        //first set child/parent relationship
+        commands
+            .entity(pivotter.child)
+            .insert(ChildOf(pivotter.head));
+        //transform child to parent 0
+        transforms.get_mut(pivotter.child).unwrap().translation = Vec3::ZERO;
+        //apply offset
+        transforms.get_mut(pivotter.child).unwrap().translation = pivotter.offset;
+        //transforms.get_mut(pivotter.child).unwrap().translation.y += 0.5; //temporary, should be based on center of mass
     }
 }
 
@@ -237,7 +251,7 @@ pub fn fabrik_syncer(
         let left = syncer.left_joint;
         let right = syncer.right_joint;
 
-        let current_stepping = syncer.current_joint;
+        let current_stepping = if syncer.current_joint { right } else { left };
 
         let mut fabrik_current = fabrik_query.get_mut(current_stepping).unwrap();
         let mut next_to_step = if current_stepping == left {
@@ -252,7 +266,7 @@ pub fn fabrik_syncer(
         }
 
         if next_to_step.1 {
-            syncer.current_joint = next_to_step.0;
+            syncer.current_joint = !syncer.current_joint;
             let mut fabrik_next = fabrik_query.get_mut(next_to_step.0).unwrap();
             fabrik_next.can_step = true;
             fabrik_next.just_finished_stepping = false;
@@ -376,22 +390,4 @@ fn midpoint_filler(
             midpoint_entity.rotation = Quat::from_rotation_arc(segment_filler.vec_dir_segment, dir);
         }
     }
-}
-
-fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Vec3 {
-    let dir = (vec_to_move - vec_static).normalize() * distance;
-    return dir + vec_static;
-}
-
-pub fn procedural_animation_plugin(app: &mut App) {
-    app.add_systems(PostStartup, setup_offset).add_systems(
-        Update,
-        (
-            dynamic_body_calculator,
-            fabrik_calculator,
-            fabrik_syncer,
-            midpoint_filler,
-        )
-            .chain(),
-    );
 }
