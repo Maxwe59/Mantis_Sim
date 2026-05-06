@@ -112,7 +112,11 @@ pub fn create_mantis(
     ));
 
     //create fabrik joinnt
-    let rad_constraints: Vec<f32> = vec![0.2, 0.2, 0.2];
+    let rad_constraints: Vec<f32> = vec![
+        30.0 * std::f32::consts::PI / 180.0,
+        170.0 * std::f32::consts::PI / 180.0,
+        170.0 * std::f32::consts::PI / 180.0,
+    ];
 
     let seg_lens = vec![0.2, 0.2, 0.2];
     let mut both_segments: [Vec<Entity>; 2] = [Vec::new(), Vec::new()];
@@ -155,7 +159,7 @@ pub fn create_mantis(
                     Vec3::new(0.4 * m, -0.2, -0.3),
                     both_offset_entities[i],
                     rad_constraints.clone(),
-                    Vec3::ZERO
+                    Vec3::new(0.0, -1.0, 0.0),
                 ),
             ))
             .id();

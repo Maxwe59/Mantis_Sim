@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{math::NormedVectorSpace, prelude::*};
 
 macro_rules! impl_new {
     //all manual values, you must manually fill all fields
@@ -61,8 +61,8 @@ pub struct FabrikJoint {
     seg_lengths: Vec<f32>,
     nodes: Vec<Entity>,
     max_target_dist: f32, //max distance target (foot) can get from target_pos (global space)
-    step_speed: f32, //how fast foot lerps from one place to another
-    target_offset: Vec3,   //relative to anchor position (segments[0]),
+    step_speed: f32,      //how fast foot lerps from one place to another
+    target_offset: Vec3,  //relative to anchor position (segments[0]),
     anchor_entity: Entity, //entity the fabrik joint is anchored to.
     angle_constraints: Vec<f32>,
     init_dir_vec: Vec3, //initial vector that compares for angle constraints. relative to anchor entity
@@ -124,36 +124,45 @@ pub fn procedural_animation_plugin(app: &mut App) {
     );
 }
 
-fn distance_restraints(vec_static: Vec3, vec_to_move: Vec3, distance: f32) -> Vec3 {
-    let dir = (vec_to_move - vec_static).normalize() * distance;
-    return dir + vec_static;
+fn distance_restraints(pnt_static: Vec3, pnt_to_move: Vec3, distance: f32) -> Vec3 {
+    let dir = (pnt_to_move - pnt_static).normalize() * distance;
+    return dir + pnt_static;
 }
 
 /*
-prev_vector -> previous vector in the change, vector being measured to current vector
-front_pos/backpos -> positions of 2 segments, they make up the current vector
-angle_constraint -> max angle between prev_vector and current_vec
-
-returns (vector,position)
+given a point_to_move and a reference point, you draw a vector from reference_vec->moved_point
+and from that vector compare to a reference vector. returns new position of point_to_move if the angle
+exheeds the angle_constraint parameter.
 */
 
 fn calc_angle_constraints(
-    prev_vec: Vec3,
-    front_pos: Vec3,
-    back_pos: Vec3,
+    ref_vec: Vec3,
+    point_ref: Vec3,
+    point_to_move: Vec3,
     angle_constraint: f32,
     segment_length: f32,
-) -> (Vec3, Vec3) {
-    let current_vec = (back_pos - front_pos).normalize();
-    let angle = prev_vec.angle_between(current_vec);
+) -> Vec3 {
+    let current_vec = (point_to_move - point_ref).normalize();
+    let angle = ref_vec.angle_between(current_vec);
     if angle > angle_constraint {
-        let axis = current_vec.cross(prev_vec).normalize();
+        let axis = current_vec.cross(ref_vec).normalize();
         let new_vec = Quat::from_axis_angle(axis, angle - angle_constraint) * current_vec;
-        let new_pos: Vec3 = front_pos + (new_vec * segment_length);
-        return (new_vec, new_pos);
+        let new_pos: Vec3 = point_ref + (new_vec * segment_length);
+        return new_pos;
     } else {
-        return (current_vec, back_pos);
+        return point_to_move;
     }
+}
+
+/*
+returns true if vector is within angle limits, false if the 2 vectors are too far apart angularly
+*/
+fn check_angle_constraint(angle_constraint: f32, vec1: Vec3, vec2: Vec3) -> bool {
+    let angle = vec1.angle_between(vec2);
+    if angle > angle_constraint {
+        return false;
+    }
+    return true;
 }
 
 pub fn setup_offset(
@@ -212,7 +221,7 @@ pub fn dynamic_body_calculator(
                 .unwrap()
                 .translation();
 
-            let (new_vec, new_pos) = calc_angle_constraints(
+            let new_pos = calc_angle_constraints(
                 last_vec,
                 front_pos,
                 back_pos,
@@ -220,7 +229,7 @@ pub fn dynamic_body_calculator(
                 segment_lengths[i],
             );
             transforms.get_mut(nodes[i + 1]).unwrap().translation = new_pos;
-            last_vec = new_vec;
+            last_vec = (new_pos - front_pos).normalize();
 
             //apply segment offset
             let offset = transform_func(i as i32, last_node_pos);
@@ -326,16 +335,40 @@ pub fn fabrik_calculator(
                 .unwrap()
                 .translation = fabrik_joint.curr_target_pos;
             for i in (0..(fabrik_joint.nodes.len() - 1)).rev() {
-                let vec_static = transforms
-                    .get(fabrik_joint.nodes[i + 1].clone())
+                let prev_point = if (i + 2 >= fabrik_joint.nodes.len()) {
+                    None
+                } else {
+                    Some(
+                        transforms
+                            .get(fabrik_joint.nodes[i + 2])
+                            .unwrap()
+                            .translation,
+                    )
+                };
+                let point_static = transforms
+                    .get(fabrik_joint.nodes[i + 1])
                     .unwrap()
                     .translation;
-                let mut vec_to_move = transforms.get_mut(fabrik_joint.nodes[i].clone()).unwrap();
-                vec_to_move.translation = distance_restraints(
-                    vec_static,
-                    vec_to_move.translation,
+
+                let mut point_to_move: Mut<'_, Transform> =
+                    transforms.get_mut(fabrik_joint.nodes[i]).unwrap();
+                point_to_move.translation = distance_restraints(
+                    point_static,
+                    point_to_move.translation,
                     fabrik_joint.seg_lengths[i],
                 );
+
+                if let Some(point) = prev_point {
+                    let prev_vec = (point_static - point).normalize();
+                    let new_pos = calc_angle_constraints(
+                        prev_vec,
+                        point_static,
+                        point_to_move.translation,
+                        fabrik_joint.angle_constraints[i + 1],
+                        fabrik_joint.seg_lengths[i],
+                    );
+                    point_to_move.translation = new_pos;
+                }
             }
             //frontpass
             transforms
@@ -343,16 +376,35 @@ pub fn fabrik_calculator(
                 .unwrap()
                 .translation = anchor_pos;
             for i in 1..fabrik_joint.nodes.len() {
-                let vec_static = transforms
+                let point_static = transforms
                     .get(fabrik_joint.nodes[i - 1].clone())
                     .unwrap()
                     .translation;
-                let mut vec_to_move = transforms.get_mut(fabrik_joint.nodes[i].clone()).unwrap();
-                vec_to_move.translation = distance_restraints(
-                    vec_static,
-                    vec_to_move.translation,
+                let ref_vec = if i == 1 {
+                    rotation_of_anchor * fabrik_joint.init_dir_vec
+                } else {
+                    (point_static
+                        - transforms
+                            .get(fabrik_joint.nodes[i - 2])
+                            .unwrap()
+                            .translation)
+                        .normalize()
+                };
+                let mut point_to_move = transforms.get_mut(fabrik_joint.nodes[i].clone()).unwrap();
+                point_to_move.translation = distance_restraints(
+                    point_static,
+                    point_to_move.translation,
                     fabrik_joint.seg_lengths[i - 1],
                 );
+
+                let new_pos = calc_angle_constraints(
+                    ref_vec,
+                    point_static,
+                    point_to_move.translation,
+                    fabrik_joint.angle_constraints[i - 1],
+                    fabrik_joint.seg_lengths[i - 1],
+                );
+                point_to_move.translation = new_pos;
             }
         }
     }
