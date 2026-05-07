@@ -114,7 +114,7 @@ pub fn create_mantis(
     //create fabrik joinnt
     let rad_constraints: Vec<f32> = vec![
         30.0 * std::f32::consts::PI / 180.0,
-        170.0 * std::f32::consts::PI / 180.0,
+        90.0 * std::f32::consts::PI / 180.0,
         170.0 * std::f32::consts::PI / 180.0,
     ];
 

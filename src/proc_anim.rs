@@ -372,12 +372,12 @@ pub fn fabrik_calculator(
             }
             //frontpass
             transforms
-                .get_mut(fabrik_joint.nodes[0].clone())
+                .get_mut(fabrik_joint.nodes[0])
                 .unwrap()
                 .translation = anchor_pos;
             for i in 1..fabrik_joint.nodes.len() {
                 let point_static = transforms
-                    .get(fabrik_joint.nodes[i - 1].clone())
+                    .get(fabrik_joint.nodes[i - 1])
                     .unwrap()
                     .translation;
                 let ref_vec = if i == 1 {
@@ -390,7 +390,7 @@ pub fn fabrik_calculator(
                             .translation)
                         .normalize()
                 };
-                let mut point_to_move = transforms.get_mut(fabrik_joint.nodes[i].clone()).unwrap();
+                let mut point_to_move = transforms.get_mut(fabrik_joint.nodes[i]).unwrap();
                 point_to_move.translation = distance_restraints(
                     point_static,
                     point_to_move.translation,
@@ -420,16 +420,16 @@ fn midpoint_filler(
         let midpoint_entity_list = &segment_filler.midpoints; //will be len(entity_list)-1 length
         for i in 0..(midpoint_entity_list.len()) {
             let pos1 = global_transforms
-                .get(entity_list[i].clone())
+                .get(entity_list[i])
                 .unwrap()
                 .translation();
             let pos2 = global_transforms
-                .get(entity_list[i + 1].clone())
+                .get(entity_list[i + 1])
                 .unwrap()
                 .translation();
             let midpoint = (pos1 + pos2) / 2.0;
             let dir = (pos1 - pos2).normalize();
-            let mut midpoint_entity = transforms.get_mut(midpoint_entity_list[i].clone()).unwrap();
+            let mut midpoint_entity = transforms.get_mut(midpoint_entity_list[i]).unwrap();
 
             //set midpoint entity to midpoint between pos1 and pos2
             midpoint_entity.translation = midpoint;
