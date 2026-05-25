@@ -11,6 +11,16 @@ macro_rules! spawn_basic {
             )?
         ))
     };
+
+     ($commands:expr $(, $meshes:expr, $materials:expr, $mesh:expr, $color:expr)?) => {
+        $commands.spawn((
+            Transform::from_translation(Vec3::ZERO),
+            $(
+                Mesh3d($meshes.add($mesh)),
+                MeshMaterial3d($materials.add($color)),
+            )?
+        ))
+    };
 }
 
 macro_rules! spawn_batch_ids {
@@ -132,7 +142,7 @@ pub fn create_mantis(
             commands,
             meshes,
             materials,
-            Sphere::new(0.01),
+            Sphere::new(0.07),
             Color::srgb_u8(124, 144, 255),
             true
         );

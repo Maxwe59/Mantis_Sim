@@ -120,7 +120,7 @@ pub fn procedural_animation_plugin(app: &mut App) {
             fabrik_syncer,
             midpoint_filler,
         )
-            .chain(),
+            .chain()
     );
 }
 
@@ -287,10 +287,15 @@ pub fn fabrik_syncer(
 
 pub fn fabrik_calculator(
     mut fabrik_query: Query<&mut FabrikJoint>,
-    mut transforms: Query<&mut Transform>,
     global_transforms: Query<&GlobalTransform>,
+    mut param_set: ParamSet<(TransformHelper, Query<&mut Transform>)>,
 ) {
     for mut fabrik_joint in fabrik_query.iter_mut() {
+        let anchor_global = param_set
+            .p0()
+            .compute_global_transform(fabrik_joint.anchor_entity)
+            .unwrap();
+        let mut transforms = param_set.p1();
         let rotation_of_anchor = global_transforms
             .get(fabrik_joint.anchor_entity)
             .unwrap()
@@ -300,10 +305,8 @@ pub fn fabrik_calculator(
             .unwrap()
             .translation()
             + (rotation_of_anchor * fabrik_joint.target_offset);
-        let anchor_pos = global_transforms
-            .get(fabrik_joint.anchor_entity)
-            .unwrap()
-            .translation();
+
+        let anchor_pos = anchor_global.translation();
 
         if fabrik_joint.max_target_dist < fabrik_joint.curr_target_pos.distance(updated_target)
             && fabrik_joint.can_step
